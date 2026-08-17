@@ -34,16 +34,6 @@ public class SeedRunner implements CommandLineRunner {
         }
     }
 
-    private boolean tableExists(String tableName) {
-        try {
-            jdbc.queryForObject("SELECT COUNT(*) FROM " + tableName + " LIMIT 1", Integer.class);
-            return true;
-        } catch (Exception e) {
-            log.info("[Seed] 表{}不存在或Hibernate未完成建表，跳过该类初始化: {}", tableName, e.getMessage());
-            return false;
-        }
-    }
-
     private boolean isPostgres() {
         try {
             String url = jdbc.getDataSource().getConnection().getMetaData().getURL();
@@ -55,55 +45,58 @@ public class SeedRunner implements CommandLineRunner {
         final boolean pg = isPostgres();
         final String now = pg ? "CURRENT_TIMESTAMP" : "NOW()";
 
-        if (!tableExists("couples")) return;
-        Integer cnt = jdbc.queryForObject("SELECT COUNT(*) FROM couples WHERE id IN (108,200,909)", Integer.class);
-        if (cnt != null && cnt >= 3) {
-            log.info("[Seed] 红线专用couples已存在(108/200/909) 跳过初始化");
-        } else {
-            String fmt = pg
-                ? "INSERT INTO couples(id, together_date, invite_code_p1, invite_code_p2, coins_total, theme, sign_streak, version) VALUES (%d,'%s','%s','%s',%d,'%s',%d,%d) ON CONFLICT (id) DO NOTHING"
-                : "INSERT IGNORE INTO couples(id, together_date, invite_code_p1, invite_code_p2, coins_total, theme, sign_streak, version) VALUES (%d,'%s','%s','%s',%d,'%s',%d,%d)";
-            jdbc.update(String.format(fmt, 909,"2024-01-01","RED909","RED910",100,"default",0,0));
-            jdbc.update(String.format(fmt, 108,"2024-06-01","RED108","RED109",1000,"default",0,0));
-            jdbc.update(String.format(fmt, 200,"2025-01-01","RED200","RED201",1000,"default",0,0));
-            log.info("[Seed] 红线专用couples插入完成 108(1000币/正常) 200(1000币/攻击者) 909(100币/穷情侣)");
-        }
+        try {
+            Integer cnt = jdbc.queryForObject("SELECT COUNT(*) FROM couples WHERE id IN (108,200,909)", Integer.class);
+            if (cnt != null && cnt >= 3) {
+                log.info("[Seed] 红线专用couples已存在(108/200/909) 跳过初始化");
+            } else {
+                String fmt = pg
+                    ? "INSERT INTO couples(id, together_date, invite_code_p1, invite_code_p2, coins_total, theme, sign_streak, version) VALUES (%d,'%s','%s','%s',%d,'%s',%d,%d) ON CONFLICT (id) DO NOTHING"
+                    : "INSERT IGNORE INTO couples(id, together_date, invite_code_p1, invite_code_p2, coins_total, theme, sign_streak, version) VALUES (%d,'%s','%s','%s',%d,'%s',%d,%d)";
+                jdbc.update(String.format(fmt, 909,"2024-01-01","RED909","RED910",100,"default",0,0));
+                jdbc.update(String.format(fmt, 108,"2024-06-01","RED108","RED109",1000,"default",0,0));
+                jdbc.update(String.format(fmt, 200,"2025-01-01","RED200","RED201",1000,"default",0,0));
+                log.info("[Seed] 红线专用couples插入完成 108(1000币/正常) 200(1000币/攻击者) 909(100币/穷情侣)");
+            }
+        } catch (Throwable t) { log.warn("[Seed] 红线couples初始化跳过(DB缺表/字段不匹配): {}", t.getMessage()); }
 
-        if (!tableExists("users")) return;
-        Integer ucnt = jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE id IN (201,202,301,302,20101,20202)", Integer.class);
-        if (ucnt != null && ucnt >= 6) {
-            log.info("[Seed] 红线专用users已存在(6条) 跳过初始化");
-        } else {
-            String fmt = pg
-                ? "INSERT INTO users(id, phone, nickname, avatar_url, couple_id, partner_idx) VALUES (%d,'%s','%s','%s',%d,%d) ON CONFLICT (id) DO NOTHING"
-                : "INSERT IGNORE INTO users(id, phone, nickname, avatar_url, couple_id, partner_idx) VALUES (%d,'%s','%s','%s',%d,%d)";
-            jdbc.update(String.format(fmt, 20101,"13800002101","红线909-A","emoji:❤️#FFB6C1",909,1));
-            jdbc.update(String.format(fmt, 20202,"13800002102","红线909-B","emoji:💙#87CEEB",909,2));
-            jdbc.update(String.format(fmt, 201,"13800000201","红线108-A","emoji:🌸#FF69B4",108,1));
-            jdbc.update(String.format(fmt, 202,"13800000202","红线108-B","emoji:🌷#DA70D6",108,2));
-            jdbc.update(String.format(fmt, 301,"13800000301","红线200-攻击者C","emoji:👿#FF4500",200,1));
-            jdbc.update(String.format(fmt, 302,"13800000302","红线200-同伴D","emoji:😈#8B0000",200,2));
-            log.info("[Seed] 红线专用users插入完成 uid20101/20202(c909) uid201/202(c108) uid301/302(c200攻击者)");
-        }
+        try {
+            Integer ucnt = jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE id IN (201,202,301,302,20101,20202)", Integer.class);
+            if (ucnt != null && ucnt >= 6) {
+                log.info("[Seed] 红线专用users已存在(6条) 跳过初始化");
+            } else {
+                String fmt = pg
+                    ? "INSERT INTO users(id, phone, nickname, avatar_url, couple_id, partner_idx) VALUES (%d,'%s','%s','%s',%d,%d) ON CONFLICT (id) DO NOTHING"
+                    : "INSERT IGNORE INTO users(id, phone, nickname, avatar_url, couple_id, partner_idx) VALUES (%d,'%s','%s','%s',%d,%d)";
+                jdbc.update(String.format(fmt, 20101,"13800002101","红线909-A","emoji:❤️#FFB6C1",909,1));
+                jdbc.update(String.format(fmt, 20202,"13800002102","红线909-B","emoji:💙#87CEEB",909,2));
+                jdbc.update(String.format(fmt, 201,"13800000201","红线108-A","emoji:🌸#FF69B4",108,1));
+                jdbc.update(String.format(fmt, 202,"13800000202","红线108-B","emoji:🌷#DA70D6",108,2));
+                jdbc.update(String.format(fmt, 301,"13800000301","红线200-攻击者C","emoji:👿#FF4500",200,1));
+                jdbc.update(String.format(fmt, 302,"13800000302","红线200-同伴D","emoji:😈#8B0000",200,2));
+                log.info("[Seed] 红线专用users插入完成 uid20101/20202(c909) uid201/202(c108) uid301/302(c200攻击者)");
+            }
+        } catch (Throwable t) { log.warn("[Seed] 红线users初始化跳过(DB缺表/字段不匹配): {}", t.getMessage()); }
 
-        if (!tableExists("coin_logs")) return;
-        Integer icnt = jdbc.queryForObject("SELECT COUNT(*) FROM coin_logs WHERE couple_id IN (108,200,909) AND reason='INIT_BALANCE'", Integer.class);
-        if (icnt != null && icnt >= 3) {
-            log.info("[Seed] INIT_BALANCE流水已存在(3条) 跳过初始化");
-        } else {
-            String today = java.time.LocalDate.now().toString();
-            java.time.LocalDateTime nowDt = java.time.LocalDateTime.now();
-            String sql = pg
-                ? "INSERT INTO coin_logs(couple_id, reason, reason_label, delta, balance_after, from_user_id, from_partner, biz_id, date_str, created_at) VALUES (%d,'%s','%s',%d,%d,NULL,NULL,'%s','%s','%s') ON CONFLICT DO NOTHING"
-                : "INSERT IGNORE INTO coin_logs(couple_id, reason, reason_label, delta, balance_after, from_user_id, from_partner, biz_id, date_str, created_at) VALUES (%d,'%s','%s',%d,%d,NULL,NULL,'%s','%s','%s')";
-            String nowStr = nowDt.toString().replace("T"," ");
-            jdbc.update(String.format(sql, 909,"INIT_BALANCE","情侣初始余额入账",100,100,"seed_init_909",today,nowStr));
-            jdbc.update(String.format(sql, 108,"INIT_BALANCE","情侣初始余额入账",1000,1000,"seed_init_108",today,nowStr));
-            jdbc.update(String.format(sql, 200,"INIT_BALANCE","情侣初始余额入账",1000,1000,"seed_init_200",today,nowStr));
-            log.info("[Seed] INIT_BALANCE流水插入完成 c909=100 c108=1000 c200=1000 B1对账diff=0");
-        }
+        try {
+            Integer icnt = jdbc.queryForObject("SELECT COUNT(*) FROM coin_logs WHERE couple_id IN (108,200,909) AND reason='INIT_BALANCE'", Integer.class);
+            if (icnt != null && icnt >= 3) {
+                log.info("[Seed] INIT_BALANCE流水已存在(3条) 跳过初始化");
+            } else {
+                String today = java.time.LocalDate.now().toString();
+                java.time.LocalDateTime nowDt = java.time.LocalDateTime.now();
+                String sql = pg
+                    ? "INSERT INTO coin_logs(couple_id, reason, reason_label, delta, balance_after, from_user_id, from_partner, biz_id, date_str, created_at) VALUES (%d,'%s','%s',%d,%d,NULL,NULL,'%s','%s','%s') ON CONFLICT DO NOTHING"
+                    : "INSERT IGNORE INTO coin_logs(couple_id, reason, reason_label, delta, balance_after, from_user_id, from_partner, biz_id, date_str, created_at) VALUES (%d,'%s','%s',%d,%d,NULL,NULL,'%s','%s','%s')";
+                String nowStr = nowDt.toString().replace("T"," ");
+                jdbc.update(String.format(sql, 909,"INIT_BALANCE","情侣初始余额入账",100,100,"seed_init_909",today,nowStr));
+                jdbc.update(String.format(sql, 108,"INIT_BALANCE","情侣初始余额入账",1000,1000,"seed_init_108",today,nowStr));
+                jdbc.update(String.format(sql, 200,"INIT_BALANCE","情侣初始余额入账",1000,1000,"seed_init_200",today,nowStr));
+                log.info("[Seed] INIT_BALANCE流水插入完成 c909=100 c108=1000 c200=1000 B1对账diff=0");
+            }
+        } catch (Throwable t) { log.warn("[Seed] 红线coin_logs初始化跳过(DB缺表/字段不匹配): {}", t.getMessage()); }
 
-        if (tableExists("diaries")) {
+        try {
             Integer diaryCnt = jdbc.queryForObject("SELECT COUNT(*) FROM diaries WHERE id=441", Integer.class);
             if (diaryCnt == null || diaryCnt == 0) {
                 String sql = String.format(
@@ -112,9 +105,9 @@ public class SeedRunner implements CommandLineRunner {
                 jdbc.update(sql);
                 log.info("[Seed] 红线日记441插入完成 c108 author=201 非作者删C3a 跨情侣读C3b");
             }
-        }
+        } catch (Throwable t) { log.warn("[Seed] 红线diaries初始化跳过(DB缺表/字段不匹配): {}", t.getMessage()); }
 
-        if (tableExists("checklists")) {
+        try {
             Integer chkCnt = jdbc.queryForObject("SELECT COUNT(*) FROM checklists WHERE id=99", Integer.class);
             if (chkCnt == null || chkCnt == 0) {
                 final Object isPreset = pg ? Boolean.FALSE : 0;
@@ -125,9 +118,9 @@ public class SeedRunner implements CommandLineRunner {
                 jdbc.update(sql);
                 log.info("[Seed] 红线清单99插入完成 c108 C5薅羊毛");
             }
-        }
+        } catch (Throwable t) { log.warn("[Seed] 红线checklists初始化跳过(DB缺表/字段不匹配): {}", t.getMessage()); }
 
-        if (tableExists("wishes")) {
+        try {
             Integer wishCnt = jdbc.queryForObject("SELECT COUNT(*) FROM wishes WHERE id=888", Integer.class);
             if (wishCnt == null || wishCnt == 0) {
                 String sql = String.format(
@@ -136,9 +129,9 @@ public class SeedRunner implements CommandLineRunner {
                 jdbc.update(sql);
                 log.info("[Seed] 红线愿望888插入完成 c909 price=666 c909只有100币 B6余额不足拦截 B7并发1成1败");
             }
-        }
+        } catch (Throwable t) { log.warn("[Seed] 红线wishes初始化跳过(DB缺表/字段不匹配): {}", t.getMessage()); }
 
-        if (tableExists("anniversaries")) {
+        try {
             Integer annivCnt = jdbc.queryForObject("SELECT COUNT(*) FROM anniversaries WHERE id=9999", Integer.class);
             if (annivCnt == null || annivCnt == 0) {
                 String sql = String.format(
@@ -147,9 +140,9 @@ public class SeedRunner implements CommandLineRunner {
                 jdbc.update(sql);
                 log.info("[Seed] 红线纪念日9999插入完成 c108 C1跨情侣读 C2跨情侣删 404+30004");
             }
-        }
+        } catch (Throwable t) { log.warn("[Seed] 红线anniversaries初始化跳过(DB缺表/字段不匹配): {}", t.getMessage()); }
 
-        if (tableExists("love_letters")) {
+        try {
             Integer letterCnt = jdbc.queryForObject("SELECT COUNT(*) FROM love_letters WHERE id=772", Integer.class);
             if (letterCnt == null || letterCnt == 0) {
                 final Object isTimeCapsule = pg ? Boolean.FALSE : 0;
@@ -159,73 +152,73 @@ public class SeedRunner implements CommandLineRunner {
                     cipherPlaceholder.replace("'", "''"), isTimeCapsule, now));
                 log.info("[Seed] 红线信件772插入完成 c108 A→B C4跨情侣读 404+30004 (cipher占位可正常详情接口访问)");
             }
-        }
+        } catch (Throwable t) { log.warn("[Seed] 红线love_letters初始化跳过(DB缺表/字段不匹配): {}", t.getMessage()); }
 
-        log.info("[Seed] 红线专用数据初始化流程完成(缺表自动跳过，不影响启动)");
+        log.info("[Seed] 红线专用数据初始化流程完成(缺表/异常自动跳过，绝不影响服务启动)");
     }
 
     private void seedQuizQuestions() {
         try {
-            jdbc.queryForObject("SELECT COUNT(*) FROM quiz_questions", Integer.class);
-        } catch (Exception e) {
-            log.info("[Seed] quiz_questions表不存在(Hibernate未建表或无Entity)，跳过初始化: {}", e.getMessage());
-            return;
+            Integer cnt = jdbc.queryForObject("SELECT COUNT(*) FROM quiz_questions", Integer.class);
+            if (cnt != null && cnt > 0) {
+                log.info("[Seed] quiz_questions 已有{}条 跳过初始化", cnt);
+                return;
+            }
+            final boolean pg = isPostgres();
+            final Object isPreset = pg ? Boolean.TRUE : 1;
+            String sql = "INSERT INTO quiz_questions(content, option_a, option_b, option_c, option_d, is_preset) VALUES (?,?,?,?,?," + (pg ? "?" : "1") + ")";
+            List<Object[]> batch = new ArrayList<>(QuizQuestions.QUESTION_COUNT);
+            for (int i = 0; i < QuizQuestions.QUESTION_COUNT; i++) {
+                String[] q = QuizQuestions.RAW.get(i);
+                batch.add(pg
+                        ? new Object[]{q[0], q[1], q[2], q[3], q[4], isPreset}
+                        : new Object[]{q[0], q[1], q[2], q[3], q[4]});
+            }
+            int[] res = jdbc.batchUpdate(sql, batch);
+            int ok = 0;
+            for (int r : res) if (r > 0) ok++;
+            log.info("[Seed] quiz_questions 批量插入完成 预期={} 成功={}", QuizQuestions.QUESTION_COUNT, ok);
+        } catch (Throwable t) {
+            log.warn("[Seed] quiz_questions初始化跳过(DB缺表/字段不匹配): {}", t.getMessage());
         }
-        Integer cnt = jdbc.queryForObject("SELECT COUNT(*) FROM quiz_questions", Integer.class);
-        if (cnt != null && cnt > 0) {
-            log.info("[Seed] quiz_questions 已有{}条 跳过初始化", cnt);
-            return;
-        }
-        final boolean pg = isPostgres();
-        final Object isPreset = pg ? Boolean.TRUE : 1;
-        String sql = "INSERT INTO quiz_questions(content, option_a, option_b, option_c, option_d, is_preset) VALUES (?,?,?,?,?," + (pg ? "?" : "1") + ")";
-        List<Object[]> batch = new ArrayList<>(QuizQuestions.QUESTION_COUNT);
-        for (int i = 0; i < QuizQuestions.QUESTION_COUNT; i++) {
-            String[] q = QuizQuestions.RAW.get(i);
-            batch.add(pg
-                    ? new Object[]{q[0], q[1], q[2], q[3], q[4], isPreset}
-                    : new Object[]{q[0], q[1], q[2], q[3], q[4]});
-        }
-        int[] res = jdbc.batchUpdate(sql, batch);
-        int ok = 0;
-        for (int r : res) if (r > 0) ok++;
-        log.info("[Seed] quiz_questions 批量插入完成 预期={} 成功={}", QuizQuestions.QUESTION_COUNT, ok);
     }
 
     private void seedChecklist() {
-        if (!tableExists("checklists")) return;
-        final boolean pg = isPostgres();
-        final String now = pg ? "CURRENT_TIMESTAMP" : "NOW()";
-        final Object isPreset = pg ? Boolean.TRUE : 1;
-        final Object isDone = pg ? Boolean.FALSE : 0;
-        final String whereIsPreset = pg ? "is_preset=?" : "is_preset=1";
-        Integer cnt = pg
-                ? jdbc.queryForObject("SELECT COUNT(*) FROM checklists WHERE couple_id IS NULL AND is_preset=?", Integer.class, isPreset)
-                : jdbc.queryForObject("SELECT COUNT(*) FROM checklists WHERE couple_id IS NULL AND is_preset=1", Integer.class);
-        if (cnt != null && cnt > 0) {
-            log.info("[Seed] checklists 预置模板已有{}条 跳过初始化", cnt);
-            return;
+        try {
+            final boolean pg = isPostgres();
+            final String now = pg ? "CURRENT_TIMESTAMP" : "NOW()";
+            final Object isPreset = pg ? Boolean.TRUE : 1;
+            final Object isDone = pg ? Boolean.FALSE : 0;
+            Integer cnt = pg
+                    ? jdbc.queryForObject("SELECT COUNT(*) FROM checklists WHERE couple_id IS NULL AND is_preset=?", Integer.class, isPreset)
+                    : jdbc.queryForObject("SELECT COUNT(*) FROM checklists WHERE couple_id IS NULL AND is_preset=1", Integer.class);
+            if (cnt != null && cnt > 0) {
+                log.info("[Seed] checklists 预置模板已有{}条 跳过初始化", cnt);
+                return;
+            }
+            String sql = String.format(
+                "INSERT INTO checklists(couple_id, sort_order, title, is_preset, is_done, category, description, icon, milestone_bonus, created_at, updated_at) VALUES (NULL,?,?,?,?,?,?,?,?,%s,%s)",
+                now, now);
+            List<Object[]> batch = new ArrayList<>(ChecklistPreset.ITEM_COUNT);
+            for (int i = 0; i < ChecklistPreset.ITEM_COUNT; i++) {
+                batch.add(new Object[]{
+                        ChecklistPreset.sortAt(i),
+                        ChecklistPreset.titleAt(i),
+                        isPreset,
+                        isDone,
+                        ChecklistPreset.categoryAt(i),
+                        ChecklistPreset.descriptionAt(i),
+                        ChecklistPreset.iconAt(i),
+                        ChecklistPreset.milestoneBonusAt(i)
+                });
+            }
+            int[] res = jdbc.batchUpdate(sql, batch);
+            int ok = 0;
+            for (int r : res) if (r > 0) ok++;
+            log.info("[Seed] checklists 预置模板插入 预期={} 成功={} category/description/icon/milestone_bonus 全列同步",
+                    ChecklistPreset.ITEM_COUNT, ok);
+        } catch (Throwable t) {
+            log.warn("[Seed] checklists初始化跳过(DB缺表/字段不匹配): {}", t.getMessage());
         }
-        String sql = String.format(
-            "INSERT INTO checklists(couple_id, sort_order, title, is_preset, is_done, category, description, icon, milestone_bonus, created_at, updated_at) VALUES (NULL,?,?,?,?,?,?,?,?,%s,%s)",
-            now, now);
-        List<Object[]> batch = new ArrayList<>(ChecklistPreset.ITEM_COUNT);
-        for (int i = 0; i < ChecklistPreset.ITEM_COUNT; i++) {
-            batch.add(new Object[]{
-                    ChecklistPreset.sortAt(i),
-                    ChecklistPreset.titleAt(i),
-                    isPreset,
-                    isDone,
-                    ChecklistPreset.categoryAt(i),
-                    ChecklistPreset.descriptionAt(i),
-                    ChecklistPreset.iconAt(i),
-                    ChecklistPreset.milestoneBonusAt(i)
-            });
-        }
-        int[] res = jdbc.batchUpdate(sql, batch);
-        int ok = 0;
-        for (int r : res) if (r > 0) ok++;
-        log.info("[Seed] checklists 预置模板插入 预期={} 成功={} category/description/icon/milestone_bonus 全列同步",
-                ChecklistPreset.ITEM_COUNT, ok);
     }
 }
