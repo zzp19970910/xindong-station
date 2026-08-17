@@ -1,4 +1,4 @@
-import request from './request'
+﻿import request from './request'
 
 export interface MsgItem {
   id: number
@@ -122,8 +122,9 @@ export const tacitApi = {
   get: (gameId: number): Promise<TacitGame> => request.get(`/tacit/${gameId}`),
   history: (params?: { page?: number; size?: number }): Promise<{ list: TacitGame[]; total: number }> =>
     request.get('/tacit/history', { params }),
-  seedQuestions: (): Promise<TacitQuestion[]> => request.get('/tacit/questions').then((list: any[]) =>
-    list.map((q: any) => ({
+  seedQuestions: (): Promise<TacitQuestion[]> => request.get('/tacit/questions').then((res: any) => {
+    const list: any[] = res.data ?? res ?? []
+    return list.map((q: any) => ({
       questionId: Number(q.questionId ?? q.id),
       question: String(q.question ?? q.q ?? ''),
       options: Array.isArray(q.options)
@@ -133,7 +134,7 @@ export const tacitApi = {
           })
         : []
     }))
-  )
+  })
 }
 
 export const quizApi = {

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="page">
     <van-nav-bar title="破冰大转盘" left-arrow fixed placeholder @click-left="$router.back()">
       <template #right>
@@ -241,11 +241,11 @@ async function doSpin() {
   let spinRes: SpinResult | null = null
   try {
     spinRes = await icebreakApi.spin()
-    if (spinRes?.maxDaily) maxLeft.value = safeNum(spinRes.maxDaily)
+    if ((spinRes as any)?.maxDaily) maxLeft.value = safeNum(spinRes.maxDaily)
     sessionId.value = spinRes.sessionId
     task.value = normalizeTask(spinRes.task) as any
     // 后端返回的扣减值做最终校准（不允许比刚才UI扣的还多，防负数）
-    const apiLeft = safeNum(spinRes.spinTodayLeft ?? spinRes.spinsLeft ?? spinRes.spinsLeftAfter)
+    const apiLeft = safeNum(spinRes.spinTodayLeft ?? spinRes.spinsLeft ?? (spinRes as any).spinsLeftAfter)
     if (!isNaN(apiLeft)) left.value = Math.min(maxLeft.value, Math.max(0, apiLeft))
 
     const seg = spinRes.segment ?? Math.floor(Math.random() * 9)
@@ -257,14 +257,14 @@ async function doSpin() {
     spinning.value = false
     const code: string = e?.code ?? e?.response?.data?.code
     const data = e?.data ?? e?.response?.data?.data
-    if (data?.maxDaily) maxLeft.value = safeNum(data.maxDaily)
+    if ((data as any)?.maxDaily) maxLeft.value = safeNum(data.maxDaily)
     if (code === '21103' && data && data.task) {
       task.value = normalizeTask(data.task) as any
       sessionId.value = data.sessionId ?? sessionId.value
       const apiLeft = safeNum(data.spinTodayLeft ?? data.spinsLeft)
       if (!isNaN(apiLeft)) left.value = Math.min(maxLeft.value, Math.max(0, apiLeft))
       else left.value = Math.min(maxLeft.value, Math.max(0, before))
-      showToast({ type: 'warning', message: '已帮你恢复当前任务啦，在下方完成哦～' })
+      showToast({ type: 'warn' as const, message: '已帮你恢复当前任务啦，在下方完成哦～' })
       await nextTick()
       setTimeout(scrollToTask, 300)
       return

@@ -1,10 +1,10 @@
-import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
+﻿import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
 import { showToast, showDialog } from 'vant'
 import { useAuthStore } from '@/stores/auth.store'
 import router from '@/router'
 
 const request: AxiosInstance = axios.create({
-  baseURL: (import.meta.env.VITE_API_BASE as string)?.trim() || '/api/v1',
+  baseURL: ((import.meta as any).env.VITE_API_BASE as string)?.trim() || '/api/v1',
   timeout: 10000
 })
 

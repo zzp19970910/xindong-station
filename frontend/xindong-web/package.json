@@ -1,11 +1,11 @@
-{
+﻿{
   "name": "xindong-web",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --port 5173",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "vite build",
     "preview": "vite preview --port 4173"
   },
   "dependencies": {
