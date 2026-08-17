@@ -1,4 +1,4 @@
-package com.xindong.auth.service;
+﻿package com.xindong.auth.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
-@Profile("dev")
+@Profile({"dev","render"})
 public class InMemorySmsCodeStore implements SmsCodeStore {
 
     private final Map<String, ValueWithExpiry> store = new ConcurrentHashMap<>();

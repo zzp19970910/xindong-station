@@ -1,14 +1,16 @@
-package com.xindong.auth.service;
+﻿package com.xindong.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
 
 @Component
-@Profile("!dev")
+@Profile({"prod"})
+@ConditionalOnBean(StringRedisTemplate.class)
 @RequiredArgsConstructor
 public class RedisSmsCodeStore implements SmsCodeStore {
 
