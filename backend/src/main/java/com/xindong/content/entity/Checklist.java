@@ -17,10 +17,7 @@ import java.time.LocalDateTime;
 @Data
 @Entity
 @NoArgsConstructor
-@Table(name = "checklists", indexes = {
-        @Index(name = "idx_couple_category_done", columnList = "couple_id,category,is_done,created_at DESC"),
-        @Index(name = "idx_couple_preset", columnList = "couple_id,is_preset DESC")
-})
+@Table(name = "checklists")
 @TableName("checklists")
 public class Checklist {
 

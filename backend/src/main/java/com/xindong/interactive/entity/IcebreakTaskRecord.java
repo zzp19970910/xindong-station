@@ -15,9 +15,7 @@ import java.time.LocalDateTime;
 @Data
 @Entity
 @NoArgsConstructor
-@Table(name = "icebreak_task_records", indexes = {
-        @Index(name = "idx_couple_created", columnList = "couple_id,created_at DESC")
-})
+@Table(name = "icebreak_task_records")
 @TableName("icebreak_task_records")
 public class IcebreakTaskRecord {
 

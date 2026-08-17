@@ -16,10 +16,7 @@ import java.time.LocalDateTime;
 @Data
 @Entity
 @NoArgsConstructor
-@Table(name = "private_messages", indexes = {
-        @Index(name = "idx_couple_created", columnList = "couple_id,created_at DESC"),
-        @Index(name = "idx_couple_isread", columnList = "couple_id,is_read,sender_id")
-})
+@Table(name = "private_messages")
 @TableName("private_messages")
 public class PrivateMessage {
 

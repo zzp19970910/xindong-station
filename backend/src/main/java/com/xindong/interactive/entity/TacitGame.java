@@ -17,10 +17,7 @@ import java.util.List;
 @Data
 @Entity
 @NoArgsConstructor
-@Table(name = "tacit_games", indexes = {
-        @Index(name = "idx_couple_created", columnList = "couple_id,created_at DESC"),
-        @Index(name = "idx_couple_status", columnList = "couple_id,game_status")
-})
+@Table(name = "tacit_games")
 @TableName("tacit_games")
 public class TacitGame {
 

@@ -17,9 +17,7 @@ import java.time.LocalDateTime;
 @Data
 @Entity
 @NoArgsConstructor
-@Table(name = "anniversaries", indexes = {
-        @Index(name = "idx_couple_top", columnList = "couple_id,is_top DESC,created_at DESC")
-})
+@Table(name = "anniversaries")
 @TableName("anniversaries")
 public class Anniversary {
 

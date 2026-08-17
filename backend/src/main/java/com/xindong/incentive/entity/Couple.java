@@ -12,10 +12,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "couples", indexes = {
-        @Index(name = "idx_invite_p1", columnList = "invite_code_p1", unique = true),
-        @Index(name = "idx_invite_p2", columnList = "invite_code_p2", unique = true)
-})
+@Table(name = "couples")
 @TableName("couples")
 public class Couple {
 

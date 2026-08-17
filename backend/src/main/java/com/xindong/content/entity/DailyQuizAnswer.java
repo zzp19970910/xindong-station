@@ -21,8 +21,6 @@ import java.time.LocalDateTime;
 @Table(name = "daily_quiz_answers", uniqueConstraints = {
         @UniqueConstraint(name = "uk_couple_q_date_partner",
                 columnNames = {"couple_id", "question_id", "date_str", "partner_idx"})
-}, indexes = {
-        @Index(name = "idx_couple_date", columnList = "couple_id,date_str DESC,question_id")
 })
 @TableName("daily_quiz_answers")
 public class DailyQuizAnswer {

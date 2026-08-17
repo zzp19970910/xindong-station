@@ -19,8 +19,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Table(name = "mood_checkins", uniqueConstraints = {
         @UniqueConstraint(name = "uk_couple_partner_date", columnNames = {"couple_id", "partner_idx", "date_str"})
-}, indexes = {
-        @Index(name = "idx_couple_date", columnList = "couple_id,date_str DESC")
 })
 @TableName("mood_checkins")
 public class Mood {

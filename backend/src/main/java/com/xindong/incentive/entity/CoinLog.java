@@ -11,10 +11,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "coin_logs", indexes = {
-        @Index(name = "idx_couple_date", columnList = "couple_id,date_str"),
-        @Index(name = "idx_couple_created", columnList = "couple_id,created_at DESC")
-})
+@Table(name = "coin_logs")
 @TableName("coin_logs")
 public class CoinLog {
 

@@ -18,10 +18,7 @@ import java.time.LocalDateTime;
 @Data
 @Entity
 @NoArgsConstructor
-@Table(name = "love_letters", indexes = {
-        @Index(name = "idx_couple_created", columnList = "couple_id,created_at DESC"),
-        @Index(name = "idx_couple_capsule", columnList = "couple_id,is_time_capsule,scheduled_at DESC")
-})
+@Table(name = "love_letters")
 @TableName("love_letters")
 public class LoveLetter {
 
