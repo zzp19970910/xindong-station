@@ -34,8 +34,36 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private static final List<SimpleGrantedAuthority> USER_ROLES =
             Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
 
+    private static final java.util.regex.Pattern STATIC_URI =
+            java.util.regex.Pattern.compile(".*\\.(js|css|map|svg|png|jpg|jpeg|gif|webp|ico|woff2?|ttf|eot|html?|txt)$",
+                    java.util.regex.Pattern.CASE_INSENSITIVE);
+
     private final JwtUtil jwtUtil;
     private final ObjectMapper objectMapper;
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        // 1. 所有静态资源文件（带后缀）直接跳过过滤器，不碰JWT，绝不可能误写30006
+        if (STATIC_URI.matcher(uri).matches() || uri.startsWith("/assets/") || uri.startsWith("/node_modules/")) {
+            return true;
+        }
+        // 2. 明确的白名单路径直接跳过（和SecurityConfig.permitAll保持一致）
+        if (uri.equals("/") || uri.equals("/index.html") || uri.equals("/favicon.ico") || uri.equals("/robots.txt") ||
+                uri.startsWith("/auth/") || uri.startsWith("/swagger-ui") || uri.equals("/swagger-ui.html") ||
+                uri.startsWith("/api-docs") || uri.startsWith("/v3/api-docs") ||
+                uri.startsWith("/actuator/health") || uri.startsWith("/actuator/info") ||
+                uri.equals("/error")) {
+            return true;
+        }
+        // 3. Vue Router History路径：GET请求 + Accept头包含text/html（浏览器F5刷新/直接输入网址）
+        String accept = request.getHeader(org.springframework.http.HttpHeaders.ACCEPT);
+        if (org.springframework.http.HttpMethod.GET.matches(request.getMethod()) && accept != null
+                && (accept.contains("text/html") || accept.contains("application/xhtml+xml"))) {
+            return true;
+        }
+        return false;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -61,15 +89,28 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
             chain.doFilter(request, response);
         } catch (BusinessException e) {
+            // 只有明确的BusinessException(TOKEN过期/签名错)才返30006系列
             SecurityContextHolder.clearContext();
             writeJsonError(response, e.getCodeValue(), e.getMsg());
-        } catch (Exception e) {
-            log.warn("[JWT解析失败] uri={}, token前缀={} err={}",
-                    request.getRequestURI(),
-                    token == null ? "NULL" : token.substring(0, Math.min(token.length(), 20)),
-                    e.getMessage());
+        } catch (org.springframework.security.access.AccessDeniedException ade) {
+            // Spring Security鉴权失败抛这个，往后面抛给exceptionHandling处理(返403)
+            throw ade;
+        } catch (jakarta.servlet.ServletException | IOException se) {
+            // Servlet/IO原异常直接抛出
+            throw se;
+        } catch (RuntimeException re) {
+            // 其他RuntimeException(PatternSyntaxException/IllegalArgument等)绝对不是JWT错！
+            // -> 清上下文后继续走过滤链，给后面的Servlet/Filter处理，绝不给前端写30006 JSON！
+            log.warn("[JWT Filter 非JWT异常放过] uri={} err={}", request.getRequestURI(), re.toString());
             SecurityContextHolder.clearContext();
-            writeJsonError(response, ErrorCode.TOKEN_INVALID.getCode(), ErrorCode.TOKEN_INVALID.getMsg());
+            CoupleContext.clear();
+            chain.doFilter(request, response);
+        } catch (Exception e) {
+            // 最后兜底：打ERROR日志后放过，绝不写JSON
+            log.error("[JWT Filter 异常放过] uri={}", request.getRequestURI(), e);
+            SecurityContextHolder.clearContext();
+            CoupleContext.clear();
+            chain.doFilter(request, response);
         } finally {
             CoupleContext.clear();
             SecurityContextHolder.clearContext();

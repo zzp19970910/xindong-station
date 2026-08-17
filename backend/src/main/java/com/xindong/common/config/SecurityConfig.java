@@ -7,6 +7,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -17,6 +19,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AndRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -34,6 +38,22 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final ObjectMapper objectMapper;
 
+    /**
+     * 匹配：GET请求 + Accept头包含text/html（浏览器直接输入网址/F5刷新Vue History路径场景）
+     * Spring Security 6 官方推荐：不用非法{var:regex}，按HTTP语义+Header精准匹配
+     */
+    private static final RequestMatcher SPA_HISTORY_GET_MATCHER = new AndRequestMatcher(
+            (RequestMatcher) request -> HttpMethod.GET.matches(request.getMethod()),
+            (RequestMatcher) request -> {
+                String accept = request.getHeader(HttpHeaders.ACCEPT);
+                if (accept == null || accept.isBlank()) return false;
+                // text/html或*/*（浏览器默认Accept通常是 "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"）
+                return accept.contains(MediaType.TEXT_HTML_VALUE) || accept.contains("application/xhtml+xml") || accept.contains("*/*");
+            },
+            // 额外保险：URI不含"."（排除明确的静态资源后缀，避免forward把js/css也当html）
+            (RequestMatcher) request -> !request.getRequestURI().contains(".")
+    );
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -49,9 +69,22 @@ public class SecurityConfig {
                         })
                 )
                 .authorizeHttpRequests(a -> a
+                        // === 1. 静态资源（明确后缀）：100%放行，Spring Security 6合法Ant Path ===
+                        .requestMatchers(HttpMethod.GET,
+                                "/*.js", "/*.css", "/*.map",
+                                "/*.svg", "/*.png", "/*.jpg", "/*.jpeg",
+                                "/*.gif", "/*.webp", "/*.ico",
+                                "/*.woff", "/*.woff2", "/*.ttf", "/*.eot",
+                                "/favicon.ico", "/robots.txt"
+                        ).permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/assets/**", "/node_modules/**", "/fonts/**", "/img/**", "/images/**"
+                        ).permitAll()
+                        // === 2. 登录+文档+Actuator白名单 ===
                         .requestMatchers(
+                                "/", "/index.html",
                                 "/auth/**",
-                                "/couple/**",
+                                "/couple/verify-invite",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/api-docs",
@@ -63,21 +96,10 @@ public class SecurityConfig {
                                 "/actuator/metrics/**",
                                 "/error"
                         ).permitAll()
-                        // 所有静态资源（路径含.）全部放行：js/css/png/jpg/svg/woff/ico等
-                        .requestMatchers(org.springframework.http.HttpMethod.GET,
-                                "/**/*.js", "/**/*.css", "/**/*.map",
-                                "/**/*.svg", "/**/*.png", "/**/*.jpg", "/**/*.jpeg",
-                                "/**/*.gif", "/**/*.webp", "/**/*.ico",
-                                "/**/*.woff", "/**/*.woff2", "/**/*.ttf", "/**/*.eot",
-                                "/favicon.ico", "/robots.txt", "/**/assets/**"
-                        ).permitAll()
-                        // 所有GET请求中不含.的（Vue Router SPA History路径）全部放行（登录/主页/设置等）
-                        .requestMatchers(org.springframework.http.HttpMethod.GET,
-                                "/", "/index.html",
-                                "/{x:[^.]*}", "/{x}/{y:[^.]*}", "/{x}/{y}/{z:[^.]*}", "/{x}/{y}/{z}/{w:[^.]*}"
-                        ).permitAll()
-                        // 公共数据GET接口（原有保留）
-                        .requestMatchers(org.springframework.http.HttpMethod.GET,
+                        // === 3. Vue Router History模式：GET + Accept头text/html + URI不含. → 放行（浏览器F5刷新不401）===
+                        .requestMatchers(SPA_HISTORY_GET_MATCHER).permitAll()
+                        // === 4. 公共GET数据接口 ===
+                        .requestMatchers(HttpMethod.GET,
                                 "/quiz/**",
                                 "/checklists",
                                 "/weekly/**",
@@ -85,7 +107,7 @@ public class SecurityConfig {
                                 "/mood/types",
                                 "/daily-quiz/today"
                         ).permitAll()
-                        // 其他所有请求（尤其是POST/PUT/DELETE的/api/v1/**接口）必须JWT认证
+                        // === 5. 其他所有请求：必须JWT认证 ===
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
