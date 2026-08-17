@@ -1,4 +1,4 @@
-﻿package com.xindong.auth.service;
+package com.xindong.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
