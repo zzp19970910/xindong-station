@@ -1,4 +1,4 @@
-﻿# syntax=docker/dockerfile:1.6
+# syntax=docker/dockerfile:1.6
 
 # ============================================================
 #  Stage 1: Build FRONTEND (Vue3 + Vite) -> dist/
@@ -11,11 +11,13 @@ COPY frontend/xindong-web/package*.json ./
 RUN npm install --no-audit --no-fund --loglevel=error
 
 # Copy source + build
-# NOTE: .env.production's VITE_API_BASE uses /api/v1 (same-origin, no external URL needed)
-# because we will serve frontend + backend from the SAME Nginx port
+# DOUBLE INSURANCE: Docker ENV overrides ANY .env file.
+# This prevents localhost:8080 hardcoded issue caused by cached docker layers + missing .env files.
+ENV VITE_API_BASE="/"
 COPY frontend/xindong-web/ ./
-# Force skip vue-tsc type check (bypass package.json script entirely)
-RUN npx vite build
+# Build log verification: confirm VITE_API_BASE value in Render build logs
+RUN echo "VERIFY-VITE-API-BASE: ${VITE_API_BASE}"
+RUN npx vite build --mode production
 
 # ============================================================
 #  Stage 2: Build BACKEND (SpringBoot + Maven) -> fat jar
