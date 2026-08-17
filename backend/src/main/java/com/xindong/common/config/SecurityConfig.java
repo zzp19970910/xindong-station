@@ -61,38 +61,23 @@ public class SecurityConfig {
                                 "/actuator/info",
                                 "/actuator/prometheus",
                                 "/actuator/metrics/**",
-                                "/error",
-                                "/",
-                                "/index.html",
-                                "/favicon.ico",
-                                "/assets/**",
-                                "/*.js",
-                                "/*.css",
-                                "/*.svg",
-                                "/*.png",
-                                "/*.jpg",
-                                "/*.jpeg",
-                                "/*.gif",
-                                "/*.ico",
-                                "/*.woff",
-                                "/*.woff2",
-                                "/*.ttf",
-                                "/*.eot",
-                                "/404",
-                                "/500"
+                                "/error"
                         ).permitAll()
+                        // 所有静态资源（路径含.）全部放行：js/css/png/jpg/svg/woff/ico等
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
-                                "/dashboard",
-                                "/home",
-                                "/mood",
-                                "/diary/**",
-                                "/anniversary",
-                                "/record",
-                                "/interactive/**",
-                                "/settings/**",
-                                "/login",
-                                "/register",
-                                "/bind",
+                                "/**/*.js", "/**/*.css", "/**/*.map",
+                                "/**/*.svg", "/**/*.png", "/**/*.jpg", "/**/*.jpeg",
+                                "/**/*.gif", "/**/*.webp", "/**/*.ico",
+                                "/**/*.woff", "/**/*.woff2", "/**/*.ttf", "/**/*.eot",
+                                "/favicon.ico", "/robots.txt", "/**/assets/**"
+                        ).permitAll()
+                        // 所有GET请求中不含.的（Vue Router SPA History路径）全部放行（登录/主页/设置等）
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                "/", "/index.html",
+                                "/{x:[^.]*}", "/{x}/{y:[^.]*}", "/{x}/{y}/{z:[^.]*}", "/{x}/{y}/{z}/{w:[^.]*}"
+                        ).permitAll()
+                        // 公共数据GET接口（原有保留）
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/quiz/**",
                                 "/checklists",
                                 "/weekly/**",
@@ -100,6 +85,7 @@ public class SecurityConfig {
                                 "/mood/types",
                                 "/daily-quiz/today"
                         ).permitAll()
+                        // 其他所有请求（尤其是POST/PUT/DELETE的/api/v1/**接口）必须JWT认证
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
