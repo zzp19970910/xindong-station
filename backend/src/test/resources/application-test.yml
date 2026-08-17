@@ -1,9 +1,26 @@
+﻿server:
+  port: 0  # 随机端口，避免8080冲突
+
 spring:
+  config:
+    activate:
+      on-profile: test
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
+      - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration
+      - org.springframework.session.data.redis.config.annotation.web.http.RedisHttpSessionConfiguration
+      - org.springframework.boot.actuate.autoconfigure.data.redis.RedisHealthContributorAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.data.redis.RedisReactiveHealthContributorAutoConfiguration
+
   datasource:
     url: jdbc:h2:mem:xindong_test;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1;
     driver-class-name: org.h2.Driver
     username: sa
     password:
+
   jpa:
     hibernate:
       ddl-auto: create-drop
@@ -12,49 +29,52 @@ spring:
     properties:
       hibernate:
         format_sql: false
+
   flyway:
     enabled: false
+
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: 127.0.0.1
+      port: 16379
+      connect-timeout: 100ms
       timeout: 100ms
-      lettuce:
-        pool:
-          max-active: 2
-          max-idle: 1
+
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=60s
+
+# ↓↓↓ 100%对齐 application.yml 主配置的层级结构! 乱套会导致@Value取不到直接启动失败!
 app:
   jwt:
-    secret: "test-jwt-secret-test-jwt-secret-test-jwt-secret-test-jwt-secret-test-jwt-secret"
+    secret: "test-jwt-secret-test-jwt-secret-test-jwt-secret-test-jwt-secret-32bytes!!"
     expire-hours: 720
   aes:
-    letter-key: "test-letter-aes-key-min-16-chars-32-bytes-long-enough"
+    letter-key: "test-letter-aes-key-min-32-bytes-long-enough-xxxxxxxxxx"
   sms:
     super-code: "1234"
-  invite-code-charset: "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+  invite-code:
+    charset: ABCDEFGHJKLMNPQRSTUVWXYZ23456789
+    length: 6
   cache:
-    ttl-seconds:
-      dashboard: 60
-      daily-quiz: 300
-      icebreak-session: 3600
-      invite-code: 86400
-      coin-overview: 30
-      couple-info: 180
-  coin-daily-limits:
-    login: 25
-    content: 50
-    interactive: 50
-  downgrade:
-    feature:
-      quiz-enabled: true
-      icebreak-enabled: true
-      time-capsule-enabled: true
-      couple-binding-enabled: true
-      cooling-mode-enabled: true
-    cache:
-      dashboard-enabled: false
-      coin-overview-enabled: false
-    readonly-enabled: false
+    dashboard-ttl-seconds: 60
+    daily-quiz-ttl-hours: 24
+    icebreak-session-ttl-hours: 24
+  coin:
+    daily-limit-login: 25
+    daily-limit-content: 50
+    daily-limit-interactive: 50
+
+downgrade:
+  feature:
+    icebreak: true
+    weekly-report: true
+  cache:
+    redis-bypass: true  # 测试环境没Redis，强制bypass所有Redis缓存逻辑
+  readonly:
+    enable: false
+
 logging:
   level:
     root: WARN

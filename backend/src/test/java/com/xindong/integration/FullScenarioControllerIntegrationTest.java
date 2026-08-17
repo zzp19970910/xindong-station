@@ -83,13 +83,13 @@ class FullScenarioControllerIntegrationTest {
     // ================= 纪念日Anniversary CRUD =================
     @Test
     @Order(10)
-    @DisplayName("SC-10: 纪念日 CREATE POST /api/v1/anniversaries → 成功返回code=0带id")
+    @DisplayName("SC-10: 纪念日 CREATE POST /anniversaries → 成功返回code=0带id")
     void sc10_createAnniversary() throws Exception {
         String payload = """
                 {"title":"测试纪念日","type":"love","emoji":"❤️","targetDate":"%s","isTop":true,"displayMode":"countup","note":"测试note"}"""
                 .formatted(LocalDate.now().format(DateTimeFormatter.ISO_DATE));
 
-        MvcResult res = mvc.perform(post("/api/v1/anniversaries")
+        MvcResult res = mvc.perform(post("/anniversaries")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + VALID_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload)
@@ -108,7 +108,7 @@ class FullScenarioControllerIntegrationTest {
 
     @Test
     @Order(11)
-    @DisplayName("SC-11: 纪念日 LIST GET /api/v1/anniversaries → 返回数组，至少1条")
+    @DisplayName("SC-11: 纪念日 LIST GET /anniversaries → 返回数组，至少1条")
     void sc11_listAnniversary() throws Exception {
         // 先插一条
         com.xindong.content.entity.Anniversary a = new com.xindong.content.entity.Anniversary();
@@ -118,7 +118,7 @@ class FullScenarioControllerIntegrationTest {
         a.setTargetDate(LocalDate.now());
         annivRepo.saveAndFlush(a);
 
-        MvcResult res = mvc.perform(get("/api/v1/anniversaries")
+        MvcResult res = mvc.perform(get("/anniversaries")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + VALID_TOKEN)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -133,7 +133,7 @@ class FullScenarioControllerIntegrationTest {
 
     @Test
     @Order(12)
-    @DisplayName("SC-12: 纪念日 UPDATE PUT /api/v1/anniversaries/{id} → 标题修改成功")
+    @DisplayName("SC-12: 纪念日 UPDATE PUT /anniversaries/{id} → 标题修改成功")
     void sc12_updateAnniversary() throws Exception {
         com.xindong.content.entity.Anniversary a = new com.xindong.content.entity.Anniversary();
         a.setCoupleId(DYNAMIC_COUPLE_ID);
@@ -146,7 +146,7 @@ class FullScenarioControllerIntegrationTest {
                 {"title":"更新后的标题","type":"love","targetDate":"%s","emoji":"🎉","note":"更新note"}"""
                 .formatted(LocalDate.now().format(DateTimeFormatter.ISO_DATE));
 
-        mvc.perform(put("/api/v1/anniversaries/" + id)
+        mvc.perform(put("/anniversaries/" + id)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + VALID_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload)
@@ -159,7 +159,7 @@ class FullScenarioControllerIntegrationTest {
 
     @Test
     @Order(13)
-    @DisplayName("SC-13: 纪念日 DELETE DELETE /api/v1/anniversaries/{id} → DB存在→成功")
+    @DisplayName("SC-13: 纪念日 DELETE DELETE /anniversaries/{id} → DB存在→成功")
     void sc13_deleteAnniversary() throws Exception {
         com.xindong.content.entity.Anniversary a = new com.xindong.content.entity.Anniversary();
         a.setCoupleId(DYNAMIC_COUPLE_ID);
@@ -169,7 +169,7 @@ class FullScenarioControllerIntegrationTest {
         Long id = annivRepo.saveAndFlush(a).getId();
         assertTrue(annivRepo.findById(id).isPresent());
 
-        mvc.perform(delete("/api/v1/anniversaries/" + id)
+        mvc.perform(delete("/anniversaries/" + id)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + VALID_TOKEN)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -181,11 +181,11 @@ class FullScenarioControllerIntegrationTest {
     // ================= 日记Diary CRUD最小验证 =================
     @Test
     @Order(20)
-    @DisplayName("SC-20: 日记发布 POST /api/v1/diaries → 成功创建返回code=0")
+    @DisplayName("SC-20: 日记发布 POST /diaries → 成功创建返回code=0")
     void sc20_createDiary() throws Exception {
         String payload = """
                 {"title":"测试日记标题","content":"今天天气很好，一起出去玩了！","mood":1,"moodEmoji":"😊","isPrivate":false,"tag":"旅行"}""";
-        MvcResult res = mvc.perform(post("/api/v1/diaries")
+        MvcResult res = mvc.perform(post("/diaries")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + VALID_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload)
@@ -199,9 +199,9 @@ class FullScenarioControllerIntegrationTest {
 
     @Test
     @Order(21)
-    @DisplayName("SC-21: 日记列表 GET /api/v1/diaries → 200 OK code=0/ok=true")
+    @DisplayName("SC-21: 日记列表 GET /diaries → 200 OK code=0/ok=true")
     void sc21_listDiary() throws Exception {
-        mvc.perform(get("/api/v1/diaries")
+        mvc.perform(get("/diaries")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + VALID_TOKEN)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -211,9 +211,9 @@ class FullScenarioControllerIntegrationTest {
     // ================= 检查清单 Checklist最小验证 =================
     @Test
     @Order(30)
-    @DisplayName("SC-30: 检查清单 GET /api/v1/checklists → 公共接口无Token也能访问(白名单)")
+    @DisplayName("SC-30: 检查清单 GET /checklists → 公共接口无Token也能访问(白名单)")
     void sc30_checklistPublicList() throws Exception {
-        MvcResult res = mvc.perform(get("/api/v1/checklists")
+        MvcResult res = mvc.perform(get("/checklists")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -226,9 +226,9 @@ class FullScenarioControllerIntegrationTest {
     // ================= 愿望商城 Wish最小验证 =================
     @Test
     @Order(40)
-    @DisplayName("SC-40: 愿望 GET /api/v1/wishes 带Token → 进入Controller 不401")
+    @DisplayName("SC-40: 愿望 GET /wishes 带Token → 进入Controller 不401")
     void sc40_wishListWithToken() throws Exception {
-        MvcResult res = mvc.perform(get("/api/v1/wishes")
+        MvcResult res = mvc.perform(get("/wishes")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + VALID_TOKEN)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())

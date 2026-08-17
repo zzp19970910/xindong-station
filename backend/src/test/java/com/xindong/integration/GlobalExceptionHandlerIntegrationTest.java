@@ -79,7 +79,7 @@ class GlobalExceptionHandlerIntegrationTest {
     @DisplayName("GE4: BusinessException抛错后 → 接口仍HTTP 200 + Result body(code/msg/ts)，不是500/堆栈HTML")
     void ge4_businessExceptionHandled() throws Exception {
         // 访问不存在的纪念日/不存在的wish等必然抛BusinessException或404的接口
-        MvcResult res = mvc.perform(get("/api/v1/anniversaries/9999999")
+        MvcResult res = mvc.perform(get("/anniversaries/9999999")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer TEST-A-108")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -99,7 +99,7 @@ class GlobalExceptionHandlerIntegrationTest {
     @Test
     @DisplayName("GE5: 不存在的API接口返回 → 状态码合理 + Result body(不白屏不堆栈)")
     void ge5_notFoundApi() throws Exception {
-        String uri = "/api/v1/this-does-not-exist-999/x/y";
+        String uri = "/this-does-not-exist-999/x/y";
         MvcResult res = mvc.perform(get(uri)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer TEST-A-108")
                         .accept(MediaType.APPLICATION_JSON))
@@ -119,7 +119,7 @@ class GlobalExceptionHandlerIntegrationTest {
     @Test
     @DisplayName("GE6: 未登录访问需要鉴权接口 → 401 + Result body(code=30005 AUTH_REQUIRED)，不200乱返")
     void ge6_unauth401Code() throws Exception {
-        MvcResult res = mvc.perform(get("/api/v1/interactive/home/me")
+        MvcResult res = mvc.perform(get("/interactive/home/me")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized())
                 .andReturn();
@@ -134,7 +134,7 @@ class GlobalExceptionHandlerIntegrationTest {
     void ge7_nullPointerCaught() throws Exception {
         // 选一个容易触发空指针的参数场景：body=null，接口@RequestBody required=true也可能直接抛400 Bad Request
         // 我们这里验证：GlobalExceptionHandler永远不会输出堆栈
-        MvcResult res = mvc.perform(post("/api/v1/auth/login")
+        MvcResult res = mvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}")  // 空body缺字段→可能抛NPE或400参数缺
                         .accept(MediaType.APPLICATION_JSON))

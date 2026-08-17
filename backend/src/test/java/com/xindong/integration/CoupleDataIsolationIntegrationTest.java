@@ -77,7 +77,7 @@ class CoupleDataIsolationIntegrationTest {
     @Test
     @DisplayName("C1-R1: cid=200攻击者C(TEST-C-200) 读cid=108情侣纪念日详情 → 30004 COUPLE_DATA_FORBIDDEN")
     void c1_r1_crossReadAnniversary() throws Exception {
-        MvcResult res = mvc.perform(get("/api/v1/anniversaries/" + annivA_108.getId())
+        MvcResult res = mvc.perform(get("/anniversaries/" + annivA_108.getId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer TEST-C-200")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -91,7 +91,7 @@ class CoupleDataIsolationIntegrationTest {
     @Test
     @DisplayName("C1-R2: cid=108合法A(TEST-A-108) 读自己的纪念日 → 成功 不30004")
     void c1_r2_legalReadOwn() throws Exception {
-        MvcResult res = mvc.perform(get("/api/v1/anniversaries/" + annivA_108.getId())
+        MvcResult res = mvc.perform(get("/anniversaries/" + annivA_108.getId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer TEST-A-108")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -104,7 +104,7 @@ class CoupleDataIsolationIntegrationTest {
     @Test
     @DisplayName("C1-R3: cid=108情侣B(TEST-B-108 partnerIdx=2) 读A创建的纪念日 → 情侣内共享成功")
     void c1_r3_coupleShareRead() throws Exception {
-        MvcResult res = mvc.perform(get("/api/v1/anniversaries/" + annivA_108.getId())
+        MvcResult res = mvc.perform(get("/anniversaries/" + annivA_108.getId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer TEST-B-108")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -118,7 +118,7 @@ class CoupleDataIsolationIntegrationTest {
     @Test
     @DisplayName("C2-W1: cid=200攻击者C 尝试DELETE 108情侣的纪念日 → 30004跨情侣删拦截")
     void c2_w1_crossDelete() throws Exception {
-        MvcResult res = mvc.perform(delete("/api/v1/anniversaries/" + annivA_108.getId())
+        MvcResult res = mvc.perform(delete("/anniversaries/" + annivA_108.getId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer TEST-C-200")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -133,7 +133,7 @@ class CoupleDataIsolationIntegrationTest {
     void c2_w2_crossUpdate() throws Exception {
         String payload = """
                 {"title":"攻击者改的","type":"love","targetDate":"2024-01-01","note":"hack"}""";
-        MvcResult res = mvc.perform(put("/api/v1/anniversaries/" + annivA_108.getId())
+        MvcResult res = mvc.perform(put("/anniversaries/" + annivA_108.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer TEST-C-200")
@@ -161,7 +161,7 @@ class CoupleDataIsolationIntegrationTest {
                 "test-jwt-secret-test-jwt-secret-test-jwt-secret-test-jwt-secret-test-jwt-secret", 720);
         String realToken = jwtUtil.generateToken(ctx);
 
-        MvcResult res = mvc.perform(delete("/api/v1/anniversaries/" + annivA_108.getId())
+        MvcResult res = mvc.perform(delete("/anniversaries/" + annivA_108.getId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + realToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -173,7 +173,7 @@ class CoupleDataIsolationIntegrationTest {
 
     // ============================ C3: 跨情侣列表读 ============================
     @Test
-    @DisplayName("C3-List: cid=200 GET /api/v1/anniversaries 列表 → 只看到200情侣自己的，看不到108的纪念日")
+    @DisplayName("C3-List: cid=200 GET /anniversaries 列表 → 只看到200情侣自己的，看不到108的纪念日")
     void c3_listIsolated() throws Exception {
         com.xindong.common.util.JwtUtil jwtUtil = new com.xindong.common.util.JwtUtil(
                 "test-jwt-secret-test-jwt-secret-test-jwt-secret-test-jwt-secret-test-jwt-secret", 720);
@@ -184,7 +184,7 @@ class CoupleDataIsolationIntegrationTest {
         c200ctx.setPartnerIdx(1);
         String c200Token = jwtUtil.generateToken(c200ctx);
 
-        MvcResult res = mvc.perform(get("/api/v1/anniversaries")
+        MvcResult res = mvc.perform(get("/anniversaries")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + c200Token)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())

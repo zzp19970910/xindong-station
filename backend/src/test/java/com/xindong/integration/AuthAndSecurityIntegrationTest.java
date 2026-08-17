@@ -51,7 +51,7 @@ class AuthAndSecurityIntegrationTest {
     @Test
     @DisplayName("AU1: 无Token访问需要鉴权接口 → HTTP 401 + code=AUTH_REQUIRED=30005")
     void au1_noToken401() throws Exception {
-        MvcResult res = mvc.perform(get("/api/v1/interactive/home/me")
+        MvcResult res = mvc.perform(get("/interactive/home/me")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized())
                 .andReturn();
@@ -62,7 +62,7 @@ class AuthAndSecurityIntegrationTest {
     @Test
     @DisplayName("AU2: 无效Token Bearer garbage → TOKEN_INVALID=30006")
     void au2_invalidToken30006() throws Exception {
-        MvcResult res = mvc.perform(get("/api/v1/interactive/home/me")
+        MvcResult res = mvc.perform(get("/interactive/home/me")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer not-a-real-jwt")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -77,7 +77,7 @@ class AuthAndSecurityIntegrationTest {
     void au3_validTokenPass() throws Exception {
         // home/me返回可能业务错(用户不在DB)，但Security/JWT不会拦，Status必须是200 OK
         // (BusinessException会通过正常响应HTTP 200+业务code返回，不是401)
-        MvcResult res = mvc.perform(get("/api/v1/interactive/home/me")
+        MvcResult res = mvc.perform(get("/interactive/home/me")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -93,7 +93,7 @@ class AuthAndSecurityIntegrationTest {
     @Test
     @DisplayName("AU4: 红线TEST-A-108作为X-Admin-Token头传 → 解析成功不401")
     void au4_redlineTestTokenAdminHeader() throws Exception {
-        MvcResult res = mvc.perform(get("/api/v1/interactive/home/me")
+        MvcResult res = mvc.perform(get("/interactive/home/me")
                         .header("X-Admin-Token", "TEST-A-108")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -106,7 +106,7 @@ class AuthAndSecurityIntegrationTest {
     @Test
     @DisplayName("AU5: 红线TEST-B-108作为Bearer传 → 解析成功")
     void au5_redlineTestTokenBearer() throws Exception {
-        MvcResult res = mvc.perform(get("/api/v1/interactive/home/me")
+        MvcResult res = mvc.perform(get("/interactive/home/me")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer TEST-B-108")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -117,9 +117,9 @@ class AuthAndSecurityIntegrationTest {
     }
 
     @Test
-    @DisplayName("AU6: 公共白名单GET接口/api/v1/quiz/** 无Token也→200不401")
+    @DisplayName("AU6: 公共白名单GET接口/quiz/** 无Token也→200不401")
     void au6_quizPublicWhitelist() throws Exception {
-        MvcResult res = mvc.perform(get("/api/v1/quiz/categories")
+        MvcResult res = mvc.perform(get("/quiz/categories")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -129,9 +129,9 @@ class AuthAndSecurityIntegrationTest {
     }
 
     @Test
-    @DisplayName("AU7: 登录接口/api/v1/auth/login POST 缺body → 400/415但绝不401/403（白名单通过Security）")
+    @DisplayName("AU7: 登录接口/auth/login POST 缺body → 400/415但绝不401/403（白名单通过Security）")
     void au7_loginWhitelistNo401() throws Exception {
-        int status = mvc.perform(post("/api/v1/auth/login")
+        int status = mvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andReturn().getResponse().getStatus();
@@ -142,7 +142,7 @@ class AuthAndSecurityIntegrationTest {
     @Test
     @DisplayName("AU8: JWT前缀不是Bearer + Token格式正常 → 不会解析当作没Token→401")
     void au8_wrongAuthPrefix() throws Exception {
-        mvc.perform(get("/api/v1/interactive/home/me")
+        mvc.perform(get("/interactive/home/me")
                         .header(HttpHeaders.AUTHORIZATION, "Basic " + validToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
@@ -151,7 +151,7 @@ class AuthAndSecurityIntegrationTest {
     @Test
     @DisplayName("AU9: 空字符串Bearer → TOKEN_INVALID=30006")
     void au9_emptyBearerInvalid() throws Exception {
-        MvcResult res = mvc.perform(get("/api/v1/interactive/home/me")
+        MvcResult res = mvc.perform(get("/interactive/home/me")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer ")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
