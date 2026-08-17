@@ -96,9 +96,11 @@ public class SeedRunner implements CommandLineRunner {
 
         Integer chkCnt = jdbc.queryForObject("SELECT COUNT(*) FROM checklists WHERE id=99", Integer.class);
         if (chkCnt == null || chkCnt == 0) {
+            final Object isPreset = pg ? Boolean.FALSE : 0;
+            final Object isDone = pg ? Boolean.FALSE : 0;
             String sql = String.format(
-                "INSERT INTO checklists(id, couple_id, sort_order, title, is_preset, is_done, category, description, icon, milestone_bonus, created_at, updated_at) VALUES (99,108,99,'[红线C5]一起完成薅羊毛清单',0,0,'日常','C标记A的清单不能加30币','✅',0,%s,%s)",
-                now, now);
+                "INSERT INTO checklists(id, couple_id, sort_order, title, is_preset, is_done, category, description, icon, milestone_bonus, created_at, updated_at) VALUES (99,108,99,'[红线C5]一起完成薅羊毛清单',%s,%s,'日常','C标记A的清单不能加30币','✅',0,%s,%s)",
+                isPreset, isDone, now, now);
             jdbc.update(sql);
             log.info("[Seed] 红线清单99插入完成 c108 C5薅羊毛");
         }
@@ -123,10 +125,11 @@ public class SeedRunner implements CommandLineRunner {
 
         Integer letterCnt = jdbc.queryForObject("SELECT COUNT(*) FROM love_letters WHERE id=772", Integer.class);
         if (letterCnt == null || letterCnt == 0) {
+            final Object isTimeCapsule = pg ? Boolean.FALSE : 0;
             String cipherPlaceholder = "REDLINE_SEED_CIPHER_PLACEHOLDER_772::" + java.util.Base64.getEncoder().encodeToString("[红线C4]亲爱的，谢谢你一直以来的陪伴，这是红线测试专用信件内容不能被C读到。".getBytes(java.nio.charset.StandardCharsets.UTF_8));
             jdbc.update(String.format(
-                "INSERT INTO love_letters(id, couple_id, sender_id, receiver_id, content_cipher, is_time_capsule, created_at) VALUES (772,108,201,202,'%s',0,%s)",
-                cipherPlaceholder.replace("'", "''"), now));
+                "INSERT INTO love_letters(id, couple_id, sender_id, receiver_id, content_cipher, is_time_capsule, created_at) VALUES (772,108,201,202,'%s',%s,%s)",
+                cipherPlaceholder.replace("'", "''"), isTimeCapsule, now));
             log.info("[Seed] 红线信件772插入完成 c108 A→B C4跨情侣读 404+30004 (cipher占位可正常详情接口访问)");
         }
 
@@ -134,16 +137,26 @@ public class SeedRunner implements CommandLineRunner {
     }
 
     private void seedQuizQuestions() {
+        try {
+            jdbc.queryForObject("SELECT COUNT(*) FROM quiz_questions", Integer.class);
+        } catch (Exception e) {
+            log.info("[Seed] quiz_questions表不存在(Hibernate未建表或无Entity)，跳过初始化: {}", e.getMessage());
+            return;
+        }
         Integer cnt = jdbc.queryForObject("SELECT COUNT(*) FROM quiz_questions", Integer.class);
         if (cnt != null && cnt > 0) {
             log.info("[Seed] quiz_questions 已有{}条 跳过初始化", cnt);
             return;
         }
-        String sql = "INSERT INTO quiz_questions(content, option_a, option_b, option_c, option_d, is_preset) VALUES (?,?,?,?,?,1)";
+        final boolean pg = isPostgres();
+        final Object isPreset = pg ? Boolean.TRUE : 1;
+        String sql = "INSERT INTO quiz_questions(content, option_a, option_b, option_c, option_d, is_preset) VALUES (?,?,?,?,?," + (pg ? "?" : "1") + ")";
         List<Object[]> batch = new ArrayList<>(QuizQuestions.QUESTION_COUNT);
         for (int i = 0; i < QuizQuestions.QUESTION_COUNT; i++) {
             String[] q = QuizQuestions.RAW.get(i);
-            batch.add(new Object[]{q[0], q[1], q[2], q[3], q[4]});
+            batch.add(pg
+                    ? new Object[]{q[0], q[1], q[2], q[3], q[4], isPreset}
+                    : new Object[]{q[0], q[1], q[2], q[3], q[4]});
         }
         int[] res = jdbc.batchUpdate(sql, batch);
         int ok = 0;
