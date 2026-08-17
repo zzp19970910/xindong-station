@@ -72,7 +72,9 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        # ⚠️ Hibernate 6 自动检测方言! 禁写 dialect, 否则警告HHH90000025
+        # ⚠️ 双保险! Render PG连接池刚启动超时+Hikari initialization-fail-timeout=-1, Hibernate没JDBC元数据会Unable to determine Dialect!
+        # 故必须显式写dialect, 警告HHH90000025可以无视 (比启动失败强1000倍)
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         jdbc:
           batch_size: 50
         order_inserts: true
