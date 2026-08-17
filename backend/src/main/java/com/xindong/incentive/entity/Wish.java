@@ -45,9 +45,11 @@ public class Wish {
     /**
      * 分步列表JSON（可选）：例 [{"name":"买鲜花","done":false},{"name":"吃火锅","done":false}]
      * completeStep接口按idx勾完→全部勾完 COMPLETE事件迁移 COMPLETED
+     * ⚠️ 不写columnDefinition硬编码! 用@Lob让Hibernate方言自动选:
+     *    PostgreSQL=TEXT / MySQL=LONGTEXT / H2=CLOB
      */
     @Lob
-    @Column(name = "steps_json", columnDefinition = "LONGTEXT")
+    @Column(name = "steps_json")
     private String stepsJson;
 
     @Column(name = "total_steps")

@@ -47,9 +47,11 @@ public class LoveLetter {
 
     /**
      * 🔴AES-256-GCM 加密后的密文字符串（明文content绝不入库）
+     * ⚠️ 不写columnDefinition硬编码! 用@Lob让Hibernate方言自动选:
+     *    PostgreSQL=TEXT / MySQL=LONGTEXT / H2=CLOB
      */
     @Lob
-    @Column(name = "content_cipher", nullable = false, columnDefinition = "LONGTEXT")
+    @Column(name = "content_cipher", nullable = false)
     private String contentCipher;
 
     /**

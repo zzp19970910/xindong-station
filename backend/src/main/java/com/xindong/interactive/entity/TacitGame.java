@@ -40,13 +40,19 @@ public class TacitGame {
 
     /**
      * 发起方自己选的每题答案：Map<qid, {myOptionId, guessPartnerOptionId}> 序列化为JSON
+     * ⚠️ 不写columnDefinition硬编码! 用@Lob让Hibernate方言自动选:
+     *    PostgreSQL=TEXT / MySQL=LONGTEXT / H2=CLOB
      */
     @Lob
-    @Column(name = "p1_answers", columnDefinition = "LONGTEXT")
+    @Column(name = "p1_answers")
     private String p1Answers;
 
+    /**
+     * ⚠️ 不写columnDefinition硬编码! 用@Lob让Hibernate方言自动选:
+     *    PostgreSQL=TEXT / MySQL=LONGTEXT / H2=CLOB
+     */
     @Lob
-    @Column(name = "p2_answers", columnDefinition = "LONGTEXT")
+    @Column(name = "p2_answers")
     private String p2Answers;
 
     @Column(name = "p1_partner_idx")

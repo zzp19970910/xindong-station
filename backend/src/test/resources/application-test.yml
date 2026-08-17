@@ -25,7 +25,7 @@ spring:
           max-idle: 1
 app:
   jwt:
-    secret-key: "test-jwt-secret-test-jwt-secret-test-jwt-secret-test-jwt-secret-test-jwt-secret"
+    secret: "test-jwt-secret-test-jwt-secret-test-jwt-secret-test-jwt-secret-test-jwt-secret"
     expire-hours: 720
   aes:
     letter-key: "test-letter-aes-key-min-16-chars-32-bytes-long-enough"

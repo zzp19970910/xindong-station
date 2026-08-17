@@ -48,9 +48,11 @@ public class PrivateMessage {
 
     /**
      * 正文 最多2000字
+     * ⚠️ 不写columnDefinition硬编码! 用@Lob让Hibernate方言自动选:
+     *    PostgreSQL=TEXT / MySQL=LONGTEXT / H2=CLOB
      */
     @Lob
-    @Column(name = "content", columnDefinition = "TEXT", length = 2000)
+    @Column(name = "content")
     private String content;
 
     @Column(name = "image_url", length = 500)
