@@ -41,12 +41,12 @@ class GlobalExceptionHandlerIntegrationTest {
 
     // 纯Result格式校验（不打网络，确保返回体结构固定）
     @Test
-    @DisplayName("GE1: Result.ok(T) → code=0 + ok=true + ts是当前Unix秒 + data=T")
+    @DisplayName("GE1: Result.success(T) → code=0 + isOK()=true + ts是当前Unix秒 + data=T")
     void ge1_resultOkStructure() {
         String data = "hello-data";
-        Result<String> r = Result.ok(data);
+        Result<String> r = Result.success(data);
         assertEquals("0", String.valueOf(r.getCode()), "成功code固定为0");
-        assertTrue(r.isOk(), "ok必须true");
+        assertTrue(r.isOK(), "isOK必须true");
         assertEquals(data, r.getData(), "data正确");
         assertNotNull(r.getMsg(), "msg非空");
         // ts应是当前Unix秒±5s
@@ -55,24 +55,24 @@ class GlobalExceptionHandlerIntegrationTest {
     }
 
     @Test
-    @DisplayName("GE2: Result.fail(ErrorCode) → code=对应错误码 + ok=false")
+    @DisplayName("GE2: Result.error(ErrorCode) → code=对应错误码 + isOK()=false")
     void ge2_resultFailByErrorCode() {
-        Result<Object> r = Result.fail(ErrorCode.COUPLE_DATA_FORBIDDEN);
+        Result<Object> r = Result.error(ErrorCode.COUPLE_DATA_FORBIDDEN);
         assertEquals(String.valueOf(ErrorCode.COUPLE_DATA_FORBIDDEN.getCode()), String.valueOf(r.getCode()));
-        assertFalse(r.isOk());
+        assertFalse(r.isOK());
         assertEquals(ErrorCode.COUPLE_DATA_FORBIDDEN.getMsg(), r.getMsg());
         assertNull(r.getData());
     }
 
     @Test
-    @DisplayName("GE3: Result.fail(code,msg) → ts同步更新 ok=false")
+    @DisplayName("GE3: Result.error(code,msg) → ts同步更新 isOK=false")
     void ge3_resultFailByCodeMsg() {
-        Result<Object> r = Result.fail(20001, "自定义错误");
+        Result<Object> r = Result.error("20001", "自定义错误");
         assertEquals("20001", String.valueOf(r.getCode()));
         assertEquals("自定义错误", r.getMsg());
-        assertFalse(r.isOk());
+        assertFalse(r.isOK());
         long now = Instant.now().getEpochSecond();
-        assertTrue(Math.abs(r.getTs() - now) < 5, "fail ts也应该是当前秒");
+        assertTrue(Math.abs(r.getTs() - now) < 5, "error ts也应该是当前秒");
     }
 
     @Test
