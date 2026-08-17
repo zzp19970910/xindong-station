@@ -72,7 +72,7 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        # ⚠️ Hibernate 6 自动检测方言! 禁写 dialect, 否则警告HHH90000025
         jdbc:
           batch_size: 50
         order_inserts: true
