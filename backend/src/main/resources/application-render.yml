@@ -1,11 +1,13 @@
 server:
   port: ${PORT:8080}
+  address: 0.0.0.0
   servlet:
     encoding:
       charset: UTF-8
       enabled: true
       force: true
       force-response: true
+    context-path:  # render部署前后端一体化：必须清空context-path! 否则根路径/静态资源不进Spring Servlet, 全404
 
 spring:
   config:
@@ -22,11 +24,30 @@ spring:
     exclude:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
+      - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration
+      - org.springframework.boot.autoconfigure.session.SessionRepositoryCustomizer
+      - org.springframework.session.data.redis.config.annotation.web.http.RedisHttpSessionConfiguration
+      - org.springframework.boot.actuate.autoconfigure.data.redis.RedisHealthContributorAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.data.redis.RedisReactiveHealthContributorAutoConfiguration
 
   cache:
     type: caffeine
     caffeine:
-      spec: maximumSize=500,expireAfterWrite=60s
+      spec: maximumSize=2000,expireAfterWrite=300s
+
+  data:
+    redis:
+      host: 127.0.0.1  # 兜底配置，就算漏了也立刻CONNREFUSED，不卡启动
+      port: 16379
+      connect-timeout: 200ms
+      timeout: 200ms
+      lettuce:
+        shutdown-timeout: 100ms
+        pool:
+          max-active: 1
+          max-idle: 0
+          min-idle: 0
 
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/xindong}
@@ -34,23 +55,48 @@ spring:
     username: ${DB_USER:postgres}
     password: ${DB_PASS:postgres}
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 5000
+      validation-timeout: 1000
+      idle-timeout: 60000
+      max-lifetime: 180000
+      initialization-fail-timeout: -1  # DB初始化失败也不卡启动，配合SeedRunner兜底
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update  # render用update，不再每次DROP+CREATE重建，启动秒级
     show-sql: false
+    open-in-view: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
 
   flyway:
     enabled: false
+
+management:
+  endpoint:
+    health:
+      enabled: true
+      show-details: never
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  health:
+    redis:
+      enabled: false
+    db:
+      enabled: true
+    diskspace:
+      enabled: true
+    ping:
+      enabled: true
 
 mybatis-plus:
   configuration:
@@ -66,8 +112,18 @@ app:
   aes:
     letter-key: ${LETTER_AES_KEY:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
 
+downgrade:
+  cache:
+    redis-bypass: true  # Render没Redis，强制用Caffeine本地缓存，跳过所有Redis Bean
+  feature:
+    icebreak: true
+    weekly-report: true
+
 logging:
   level:
-    root: INFO
+    root: WARN
     com.xindong: INFO
     org.springframework.security: WARN
+    org.springframework.boot.autoconfigure: ERROR
+    io.lettuce: ERROR
+    org.redisson: ERROR
