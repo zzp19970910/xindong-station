@@ -50,7 +50,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
         // 2. 明确的白名单路径直接跳过（和SecurityConfig.permitAll保持一致）
         if (uri.equals("/") || uri.equals("/index.html") || uri.equals("/favicon.ico") || uri.equals("/robots.txt") ||
-                uri.startsWith("/auth/") || uri.startsWith("/swagger-ui") || uri.equals("/swagger-ui.html") ||
+                uri.startsWith("/api/v1/auth/") || uri.startsWith("/swagger-ui") || uri.equals("/swagger-ui.html") ||
                 uri.startsWith("/api-docs") || uri.startsWith("/v3/api-docs") ||
                 uri.startsWith("/actuator/health") || uri.startsWith("/actuator/info") ||
                 uri.equals("/error")) {

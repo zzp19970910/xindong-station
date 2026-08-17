@@ -70,6 +70,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(a -> a
                         // === 1. 静态资源（明确后缀）：100%放行，Spring Security 6合法Ant Path ===
+                        // （这些不走DispatcherServlet，Tomcat DefaultServlet直接处理，permitAll这里纯兜底）
                         .requestMatchers(HttpMethod.GET,
                                 "/*.js", "/*.css", "/*.map",
                                 "/*.svg", "/*.png", "/*.jpg", "/*.jpeg",
@@ -80,11 +81,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 "/assets/**", "/node_modules/**", "/fonts/**", "/img/**", "/images/**"
                         ).permitAll()
-                        // === 2. 登录+文档+Actuator白名单 ===
+                        // === 2. Actuator / Swagger 白名单（不走DispatcherServlet，兜底）===
                         .requestMatchers(
                                 "/", "/index.html",
-                                "/auth/**",
-                                "/couple/verify-invite",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/api-docs",
@@ -96,18 +95,23 @@ public class SecurityConfig {
                                 "/actuator/metrics/**",
                                 "/error"
                         ).permitAll()
-                        // === 3. Vue Router History模式：GET + Accept头text/html + URI不含. → 放行（浏览器F5刷新不401）===
-                        .requestMatchers(SPA_HISTORY_GET_MATCHER).permitAll()
-                        // === 4. 公共GET数据接口 ===
-                        .requestMatchers(HttpMethod.GET,
-                                "/quiz/**",
-                                "/checklists",
-                                "/weekly/**",
-                                "/anniversaries/**",
-                                "/mood/types",
-                                "/daily-quiz/today"
+                        // === 3. Spring MVC真实Controller接口白名单（带/api/v1前缀，servlet.path生效后必须对齐！）===
+                        .requestMatchers(
+                                "/api/v1/auth/**",
+                                "/api/v1/couple/verify-invite"
                         ).permitAll()
-                        // === 5. 其他所有请求：必须JWT认证 ===
+                        // === 4. Vue Router History模式：GET + Accept头text/html + URI不含. → 放行（浏览器F5刷新不401）===
+                        .requestMatchers(SPA_HISTORY_GET_MATCHER).permitAll()
+                        // === 5. 公共GET数据接口（带/api/v1前缀）===
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/quiz/**",
+                                "/api/v1/checklists",
+                                "/api/v1/weekly/**",
+                                "/api/v1/anniversaries/**",
+                                "/api/v1/mood/types",
+                                "/api/v1/daily-quiz/today"
+                        ).permitAll()
+                        // === 6. 其他所有请求：必须JWT认证 ===
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

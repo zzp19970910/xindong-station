@@ -7,7 +7,9 @@ server:
       enabled: true
       force: true
       force-response: true
-    context-path:  # render部署前后端一体化：必须清空context-path! 否则根路径/静态资源不进Spring Servlet, 全404
+    # ⚠️绝对不要用context-path! 前后端一体化部署请用主配置application.yml的 spring.mvc.servlet.path=/api/v1
+    #   context-path会强制给静态资源/Actuator/Vue History都加前缀→全404/30006! 主配置已经统一配置不用再重复
+    context-path:
 
 spring:
   config:
