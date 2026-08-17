@@ -167,19 +167,26 @@ public class SeedRunner implements CommandLineRunner {
     private void seedChecklist() {
         final boolean pg = isPostgres();
         final String now = pg ? "CURRENT_TIMESTAMP" : "NOW()";
-        Integer cnt = jdbc.queryForObject("SELECT COUNT(*) FROM checklists WHERE couple_id IS NULL AND is_preset=true", Integer.class);
+        final Object isPreset = pg ? Boolean.TRUE : 1;
+        final Object isDone = pg ? Boolean.FALSE : 0;
+        final String whereIsPreset = pg ? "is_preset=?" : "is_preset=1";
+        Integer cnt = pg
+                ? jdbc.queryForObject("SELECT COUNT(*) FROM checklists WHERE couple_id IS NULL AND is_preset=?", Integer.class, isPreset)
+                : jdbc.queryForObject("SELECT COUNT(*) FROM checklists WHERE couple_id IS NULL AND is_preset=1", Integer.class);
         if (cnt != null && cnt > 0) {
             log.info("[Seed] checklists 预置模板已有{}条 跳过初始化", cnt);
             return;
         }
         String sql = String.format(
-            "INSERT INTO checklists(couple_id, sort_order, title, is_preset, is_done, category, description, icon, milestone_bonus, created_at, updated_at) VALUES (NULL,?,?,true,false,?,?,?,?,%s,%s)",
+            "INSERT INTO checklists(couple_id, sort_order, title, is_preset, is_done, category, description, icon, milestone_bonus, created_at, updated_at) VALUES (NULL,?,?,?,?,?,?,?,?,%s,%s)",
             now, now);
         List<Object[]> batch = new ArrayList<>(ChecklistPreset.ITEM_COUNT);
         for (int i = 0; i < ChecklistPreset.ITEM_COUNT; i++) {
             batch.add(new Object[]{
                     ChecklistPreset.sortAt(i),
                     ChecklistPreset.titleAt(i),
+                    isPreset,
+                    isDone,
                     ChecklistPreset.categoryAt(i),
                     ChecklistPreset.descriptionAt(i),
                     ChecklistPreset.iconAt(i),
