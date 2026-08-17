@@ -29,6 +29,7 @@
         <statemachine.version>4.0.0</statemachine.version>
         <testcontainers.version>1.20.1</testcontainers.version>
         <lombok.version>1.18.34</lombok.version>
+        <skip.frontend.copy>false</skip.frontend.copy>
     </properties>
 
     <dependencies>
@@ -286,12 +287,6 @@
             </plugin>
         </plugins>
     </build>
-
-    <properties>
-        <!-- 默认不跳过前端dist拷贝（Docker分阶段构建已经build好dist直接拷贝） -->
-        <!-- 纯后端本地联调不想管前端时，运行参数加 -Dskip.frontend.copy=true 即可 -->
-        <skip.frontend.copy>false</skip.frontend.copy>
-    </properties>
 
     <!-- ============================================================
          Profile: embed-frontend
