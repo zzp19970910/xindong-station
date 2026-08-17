@@ -30,60 +30,84 @@ public class WishController {
     @Operation(summary = "🔴B7红线紧急重置：强制修正wish=601/602归属couple=108+状态PENDING_APPROVAL+价格600（不依赖Flyway重跑）+ 强制重建触发器不允许负余额")
     @PostMapping("/admin/reset-b7")
     public Result<Map<String, Object>> resetB7Wishes() {
-        // 1️⃣ 先：强制重建DB触发器（GREATEST/0硬钳位 coins_total 绝对不允许<0）
-        //    不依赖 Flyway V10/V11 checksum，接口一调立刻重建，一劳永逸
+        String dbUrl = jdbcTemplate.getDataSource() == null ? "" :
+            org.springframework.util.StringUtils.hasText(jdbcTemplate.getDataSource().toString()) ? "" : "";
+        boolean isPostgres = false;
         try {
-            jdbcTemplate.execute("DROP TRIGGER IF EXISTS trg_block_illegal_coin_update");
-            String triggerSql =
-                "CREATE TRIGGER trg_block_illegal_coin_update\n" +
-                "BEFORE UPDATE ON couples\n" +
-                "FOR EACH ROW\n" +
-                "BEGIN\n" +
-                "    IF NEW.coins_total <> OLD.coins_total THEN\n" +
-                "        -- ★★★ 硬钳位：任何情况下 coins_total 绝对不能<0！就算Java算错/击穿，DB层也兜底成0\n" +
-                "        IF NEW.coins_total < 0 THEN\n" +
-                "            SET NEW.coins_total = 0;\n" +
-                "        END IF;\n" +
-                "        IF @TRG_ALLOW_COIN_UPDATE = 1 THEN\n" +
-                "            SET @TRG_ALLOW_COIN_UPDATE = NULL;\n" +
-                "        ELSE\n" +
-                "            SIGNAL SQLSTATE '45000'\n" +
-                "                SET MESSAGE_TEXT = '50703:BLOCK_ILLEGAL_COIN_UPDATE: couples.coins_total 必须通过 CoinService.addCoins() 修改',\n" +
-                "                    MYSQL_ERRNO = 50703;\n" +
-                "        END IF;\n" +
-                "    END IF;\n" +
-                "END";
-            jdbcTemplate.execute(triggerSql);
-        } catch (Exception trigE) {
-            // 触发器报错不阻塞主流程（可能权限/方言差异），但记日志
+            String url = jdbcTemplate.getDataSource().getConnection().getMetaData().getURL();
+            isPostgres = url != null && url.toLowerCase().startsWith("jdbc:postgresql");
+        } catch (Exception ignore) {}
+        final boolean pg = isPostgres;
+        final String nowFn = pg ? "CURRENT_TIMESTAMP" : "NOW()";
+
+        // 1️⃣ 先：强制重建DB触发器（PostgreSQL跳过，MySQL才建）
+        if (!pg) {
+            try {
+                jdbcTemplate.execute("DROP TRIGGER IF EXISTS trg_block_illegal_coin_update");
+                String triggerSql =
+                    "CREATE TRIGGER trg_block_illegal_coin_update\n" +
+                    "BEFORE UPDATE ON couples\n" +
+                    "FOR EACH ROW\n" +
+                    "BEGIN\n" +
+                    "    IF NEW.coins_total <> OLD.coins_total THEN\n" +
+                    "        IF NEW.coins_total < 0 THEN\n" +
+                    "            SET NEW.coins_total = 0;\n" +
+                    "        END IF;\n" +
+                    "        IF @TRG_ALLOW_COIN_UPDATE = 1 THEN\n" +
+                    "            SET @TRG_ALLOW_COIN_UPDATE = NULL;\n" +
+                    "        ELSE\n" +
+                    "            SIGNAL SQLSTATE '45000'\n" +
+                    "                SET MESSAGE_TEXT = '50703:BLOCK_ILLEGAL_COIN_UPDATE: couples.coins_total 必须通过 CoinService.addCoins() 修改',\n" +
+                    "                    MYSQL_ERRNO = 50703;\n" +
+                    "        END IF;\n" +
+                    "    END IF;\n" +
+                    "END";
+                jdbcTemplate.execute(triggerSql);
+            } catch (Exception trigE) { }
         }
+
         // 2️⃣ wish=601/602 UPSERT + 强制修正归属+状态（等价于V9效果）
-        String[] fixSqls = new String[] {
-            "INSERT IGNORE INTO wishes(id, couple_id, title, cost, cover_img, created_by, status, steps_json, total_steps, completed_steps, created_at, updated_at) " +
-                "VALUES (601, 108, '[红线B7]并发兑换愿望1(600币)', 600, 'redline_b7_1.png', 201, 'PENDING_APPROVAL', '[{\\\"name\\\":\\\"执行兑现\\\",\\\"done\\\":false}]', 1, 0, NOW(), NOW())",
-            "INSERT IGNORE INTO wishes(id, couple_id, title, cost, cover_img, created_by, status, steps_json, total_steps, completed_steps, created_at, updated_at) " +
-                "VALUES (602, 108, '[红线B7]并发兑换愿望2(600币)', 600, 'redline_b7_2.png', 201, 'PENDING_APPROVAL', '[{\\\"name\\\":\\\"执行兑现\\\",\\\"done\\\":false}]', 1, 0, NOW(), NOW())",
-            "UPDATE wishes SET couple_id=108, status='PENDING_APPROVAL', cost=600, title='[红线B7]并发兑换愿望1(600币)', cover_img='redline_b7_1.png', created_by=201, steps_json='[{\\\"name\\\":\\\"执行兑现\\\",\\\"done\\\":false}]', total_steps=1, completed_steps=0, updated_at=NOW() WHERE id=601",
-            "UPDATE wishes SET couple_id=108, status='PENDING_APPROVAL', cost=600, title='[红线B7]并发兑换愿望2(600币)', cover_img='redline_b7_2.png', created_by=201, steps_json='[{\\\"name\\\":\\\"执行兑现\\\",\\\"done\\\":false}]', total_steps=1, completed_steps=0, updated_at=NOW() WHERE id=602"
-        };
+        String[] fixSqls;
+        if (pg) {
+            fixSqls = new String[]{
+                "INSERT INTO wishes(id, couple_id, title, cost, cover_img, created_by, status, steps_json, total_steps, completed_steps, created_at, updated_at) " +
+                    "VALUES (601, 108, '[红线B7]并发兑换愿望1(600币)', 600, 'redline_b7_1.png', 201, 'PENDING_APPROVAL', '[{\"name\":\"执行兑现\",\"done\":false}]', 1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT (id) DO NOTHING",
+                "INSERT INTO wishes(id, couple_id, title, cost, cover_img, created_by, status, steps_json, total_steps, completed_steps, created_at, updated_at) " +
+                    "VALUES (602, 108, '[红线B7]并发兑换愿望2(600币)', 600, 'redline_b7_2.png', 201, 'PENDING_APPROVAL', '[{\"name\":\"执行兑现\",\"done\":false}]', 1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT (id) DO NOTHING",
+                "UPDATE wishes SET couple_id=108, status='PENDING_APPROVAL', cost=600, title='[红线B7]并发兑换愿望1(600币)', cover_img='redline_b7_1.png', created_by=201, steps_json='[{\"name\":\"执行兑现\",\"done\":false}]', total_steps=1, completed_steps=0, updated_at=CURRENT_TIMESTAMP WHERE id=601",
+                "UPDATE wishes SET couple_id=108, status='PENDING_APPROVAL', cost=600, title='[红线B7]并发兑换愿望2(600币)', cover_img='redline_b7_2.png', created_by=201, steps_json='[{\"name\":\"执行兑现\",\"done\":false}]', total_steps=1, completed_steps=0, updated_at=CURRENT_TIMESTAMP WHERE id=602"
+            };
+        } else {
+            fixSqls = new String[]{
+                "INSERT IGNORE INTO wishes(id, couple_id, title, cost, cover_img, created_by, status, steps_json, total_steps, completed_steps, created_at, updated_at) " +
+                    "VALUES (601, 108, '[红线B7]并发兑换愿望1(600币)', 600, 'redline_b7_1.png', 201, 'PENDING_APPROVAL', '[{\\\"name\\\":\\\"执行兑现\\\",\\\"done\\\":false}]', 1, 0, NOW(), NOW())",
+                "INSERT IGNORE INTO wishes(id, couple_id, title, cost, cover_img, created_by, status, steps_json, total_steps, completed_steps, created_at, updated_at) " +
+                    "VALUES (602, 108, '[红线B7]并发兑换愿望2(600币)', 600, 'redline_b7_2.png', 201, 'PENDING_APPROVAL', '[{\\\"name\\\":\\\"执行兑现\\\",\\\"done\\\":false}]', 1, 0, NOW(), NOW())",
+                "UPDATE wishes SET couple_id=108, status='PENDING_APPROVAL', cost=600, title='[红线B7]并发兑换愿望1(600币)', cover_img='redline_b7_1.png', created_by=201, steps_json='[{\\\"name\\\":\\\"执行兑现\\\",\\\"done\\\":false}]', total_steps=1, completed_steps=0, updated_at=NOW() WHERE id=601",
+                "UPDATE wishes SET couple_id=108, status='PENDING_APPROVAL', cost=600, title='[红线B7]并发兑换愿望2(600币)', cover_img='redline_b7_2.png', created_by=201, steps_json='[{\\\"name\\\":\\\"执行兑现\\\",\\\"done\\\":false}]', total_steps=1, completed_steps=0, updated_at=NOW() WHERE id=602"
+            };
+        }
         int[] cnts = jdbcTemplate.batchUpdate(fixSqls);
         Map<String, Object> out = new java.util.LinkedHashMap<>();
         out.put("wish601_updated", cnts[2]);
         out.put("wish602_updated", cnts[3]);
-        // 顺便把wish_order表如果有之前B7跑出来的重复order清掉，避免唯一索引冲突
         int del = jdbcTemplate.update("DELETE FROM wish_orders WHERE wish_id IN (601, 602)");
         out.put("cleared_old_orders_today", del);
-        // 3️⃣ 额外保险：直接把 couple=108/909 coins_total 如果<0 强行改回0（修历史数据遗留的-1问题）
-        //    必须先放行触发器！否则会被 50703 回滚
+
+        // 3️⃣ 额外保险：直接把 couple=108/909 coins_total 如果<0 强行改回0
         int fixNeg = 0, fixNeg909 = 0;
         try {
-            jdbcTemplate.execute("SET @TRG_ALLOW_COIN_UPDATE = 1");
+            if (!pg) {
+                jdbcTemplate.execute("SET @TRG_ALLOW_COIN_UPDATE = 1");
+            }
             fixNeg = jdbcTemplate.update(
-                    "UPDATE couples SET coins_total = 0, updated_at = NOW() WHERE id = 108 AND coins_total < 0");
+                    "UPDATE couples SET coins_total = 0, updated_at = " + nowFn + " WHERE id = 108 AND coins_total < 0");
             fixNeg909 = jdbcTemplate.update(
-                    "UPDATE couples SET coins_total = 0, updated_at = NOW() WHERE id = 909 AND coins_total < 0");
+                    "UPDATE couples SET coins_total = 0, updated_at = " + nowFn + " WHERE id = 909 AND coins_total < 0");
         } finally {
-            jdbcTemplate.execute("SET @TRG_ALLOW_COIN_UPDATE = NULL");
+            if (!pg) {
+                try { jdbcTemplate.execute("SET @TRG_ALLOW_COIN_UPDATE = NULL"); } catch (Exception ignore) {}
+            }
         }
         out.put("fixed_negative_balance_c108", fixNeg);
         out.put("fixed_negative_balance_c909", fixNeg909);

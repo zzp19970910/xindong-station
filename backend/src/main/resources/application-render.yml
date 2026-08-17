@@ -1,0 +1,73 @@
+server:
+  port: ${PORT:8080}
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+      force-response: true
+
+spring:
+  config:
+    activate:
+      on-profile: render
+
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=60s
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/xindong}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:postgres}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  flyway:
+    enabled: false
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+app:
+  aes:
+    letter-key: ${LETTER_AES_KEY:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+
+logging:
+  level:
+    root: INFO
+    com.xindong: INFO
+    org.springframework.security: WARN

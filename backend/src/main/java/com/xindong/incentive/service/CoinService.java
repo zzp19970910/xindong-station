@@ -214,14 +214,18 @@ public class CoinService {
 
         try {
             entityManager.unwrap(Session.class).doWork(conn -> {
-                // 同一连接：先放行触发器
-                try (java.sql.PreparedStatement ps = conn.prepareStatement("SET @TRG_ALLOW_COIN_UPDATE = 1")) {
-                    ps.executeUpdate();
+                String driver = conn.getMetaData().getURL() == null ? "" : conn.getMetaData().getURL().toLowerCase();
+                boolean isPostgres = driver.startsWith("jdbc:postgresql");
+                // 同一连接：先放行触发器（PostgreSQL无MySQL触发器，跳过SET）
+                if (!isPostgres) {
+                    try (java.sql.PreparedStatement ps = conn.prepareStatement("SET @TRG_ALLOW_COIN_UPDATE = 1")) {
+                        ps.executeUpdate();
+                    }
                 }
-                // ✅ SQL原子加减！ coins_total = coins_total + delta（并发100线程绝对正确，MySQL行锁串行）
-                // 加硬兜底 GREATEST(coins_total + ?, 0) 防任何极端负数写入（即使事前判断被击穿也不会是负数）
-                try (java.sql.PreparedStatement ps = conn.prepareStatement(
-                        "UPDATE couples SET coins_total = GREATEST(coins_total + ?, 0), updated_at = NOW() WHERE id = ?")) {
+                // ✅ SQL原子加减！ coins_total = coins_total + delta（并发100线程绝对正确，DB行锁串行）
+                try (java.sql.PreparedStatement ps = conn.prepareStatement(isPostgres
+                        ? "UPDATE couples SET coins_total = GREATEST(coins_total + ?, 0), updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+                        : "UPDATE couples SET coins_total = GREATEST(coins_total + ?, 0), updated_at = NOW() WHERE id = ?")) {
                     ps.setInt(1, writeDelta);
                     ps.setLong(2, cidForLambda);
                     int upd = ps.executeUpdate();
