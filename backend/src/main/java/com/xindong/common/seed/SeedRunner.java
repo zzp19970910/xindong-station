@@ -23,10 +23,25 @@ public class SeedRunner implements CommandLineRunner {
     @Override
     public void run(String... args) {
         long t0 = System.currentTimeMillis();
-        try { seedQuizQuestions(); } catch (Exception e) { log.error("[Seed] quiz_questions初始化失败，跳过(不影响服务启动)", e); }
-        try { seedChecklist();    } catch (Exception e) { log.error("[Seed] checklists预置初始化失败，跳过(不影响服务启动)", e); }
-        try { seedRedlineData();  } catch (Exception e) { log.error("[Seed] 红线专用数据初始化失败，跳过(不影响服务启动)", e); }
-        log.info("[Seed初始化] 耗时={}ms", System.currentTimeMillis() - t0);
+        try {
+            try { seedQuizQuestions(); } catch (Throwable e) { log.warn("[Seed] quiz_questions初始化跳过(不影响服务启动): {}", e.getMessage()); }
+            try { seedChecklist();    } catch (Throwable e) { log.warn("[Seed] checklists预置初始化跳过(不影响服务启动): {}", e.getMessage()); }
+            try { seedRedlineData();  } catch (Throwable e) { log.warn("[Seed] 红线专用数据初始化跳过(不影响服务启动): {}", e.getMessage()); }
+        } catch (Throwable t) {
+            log.error("[Seed] 初始化全流程出现未预期异常(已强制吞掉，不影响服务启动): {}", t.getMessage(), t);
+        } finally {
+            log.info("[Seed初始化] 耗时={}ms，无论初始化是否成功，服务都会正常启动对外提供服务", System.currentTimeMillis() - t0);
+        }
+    }
+
+    private boolean tableExists(String tableName) {
+        try {
+            jdbc.queryForObject("SELECT COUNT(*) FROM " + tableName + " LIMIT 1", Integer.class);
+            return true;
+        } catch (Exception e) {
+            log.info("[Seed] 表{}不存在或Hibernate未完成建表，跳过该类初始化: {}", tableName, e.getMessage());
+            return false;
+        }
     }
 
     private boolean isPostgres() {
@@ -40,6 +55,7 @@ public class SeedRunner implements CommandLineRunner {
         final boolean pg = isPostgres();
         final String now = pg ? "CURRENT_TIMESTAMP" : "NOW()";
 
+        if (!tableExists("couples")) return;
         Integer cnt = jdbc.queryForObject("SELECT COUNT(*) FROM couples WHERE id IN (108,200,909)", Integer.class);
         if (cnt != null && cnt >= 3) {
             log.info("[Seed] 红线专用couples已存在(108/200/909) 跳过初始化");
@@ -53,6 +69,7 @@ public class SeedRunner implements CommandLineRunner {
             log.info("[Seed] 红线专用couples插入完成 108(1000币/正常) 200(1000币/攻击者) 909(100币/穷情侣)");
         }
 
+        if (!tableExists("users")) return;
         Integer ucnt = jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE id IN (201,202,301,302,20101,20202)", Integer.class);
         if (ucnt != null && ucnt >= 6) {
             log.info("[Seed] 红线专用users已存在(6条) 跳过初始化");
@@ -69,6 +86,7 @@ public class SeedRunner implements CommandLineRunner {
             log.info("[Seed] 红线专用users插入完成 uid20101/20202(c909) uid201/202(c108) uid301/302(c200攻击者)");
         }
 
+        if (!tableExists("coin_logs")) return;
         Integer icnt = jdbc.queryForObject("SELECT COUNT(*) FROM coin_logs WHERE couple_id IN (108,200,909) AND reason='INIT_BALANCE'", Integer.class);
         if (icnt != null && icnt >= 3) {
             log.info("[Seed] INIT_BALANCE流水已存在(3条) 跳过初始化");
@@ -85,55 +103,65 @@ public class SeedRunner implements CommandLineRunner {
             log.info("[Seed] INIT_BALANCE流水插入完成 c909=100 c108=1000 c200=1000 B1对账diff=0");
         }
 
-        Integer diaryCnt = jdbc.queryForObject("SELECT COUNT(*) FROM diaries WHERE id=441", Integer.class);
-        if (diaryCnt == null || diaryCnt == 0) {
-            String sql = String.format(
-                "INSERT INTO diaries(id, couple_id, user_id, content, mood, record_date, created_at, updated_at) VALUES (441,108,201,'[红线专用]今天和TA一起看了日落，超开心，期待下次约会！',5,'%s',%s,%s)",
-                java.time.LocalDate.now(), now, now);
-            jdbc.update(sql);
-            log.info("[Seed] 红线日记441插入完成 c108 author=201 非作者删C3a 跨情侣读C3b");
+        if (tableExists("diaries")) {
+            Integer diaryCnt = jdbc.queryForObject("SELECT COUNT(*) FROM diaries WHERE id=441", Integer.class);
+            if (diaryCnt == null || diaryCnt == 0) {
+                String sql = String.format(
+                    "INSERT INTO diaries(id, couple_id, user_id, content, mood, record_date, created_at, updated_at) VALUES (441,108,201,'[红线专用]今天和TA一起看了日落，超开心，期待下次约会！',5,'%s',%s,%s)",
+                    java.time.LocalDate.now(), now, now);
+                jdbc.update(sql);
+                log.info("[Seed] 红线日记441插入完成 c108 author=201 非作者删C3a 跨情侣读C3b");
+            }
         }
 
-        Integer chkCnt = jdbc.queryForObject("SELECT COUNT(*) FROM checklists WHERE id=99", Integer.class);
-        if (chkCnt == null || chkCnt == 0) {
-            final Object isPreset = pg ? Boolean.FALSE : 0;
-            final Object isDone = pg ? Boolean.FALSE : 0;
-            String sql = String.format(
-                "INSERT INTO checklists(id, couple_id, sort_order, title, is_preset, is_done, category, description, icon, milestone_bonus, created_at, updated_at) VALUES (99,108,99,'[红线C5]一起完成薅羊毛清单',%s,%s,'日常','C标记A的清单不能加30币','✅',0,%s,%s)",
-                isPreset, isDone, now, now);
-            jdbc.update(sql);
-            log.info("[Seed] 红线清单99插入完成 c108 C5薅羊毛");
+        if (tableExists("checklists")) {
+            Integer chkCnt = jdbc.queryForObject("SELECT COUNT(*) FROM checklists WHERE id=99", Integer.class);
+            if (chkCnt == null || chkCnt == 0) {
+                final Object isPreset = pg ? Boolean.FALSE : 0;
+                final Object isDone = pg ? Boolean.FALSE : 0;
+                String sql = String.format(
+                    "INSERT INTO checklists(id, couple_id, sort_order, title, is_preset, is_done, category, description, icon, milestone_bonus, created_at, updated_at) VALUES (99,108,99,'[红线C5]一起完成薅羊毛清单',%s,%s,'日常','C标记A的清单不能加30币','✅',0,%s,%s)",
+                    isPreset, isDone, now, now);
+                jdbc.update(sql);
+                log.info("[Seed] 红线清单99插入完成 c108 C5薅羊毛");
+            }
         }
 
-        Integer wishCnt = jdbc.queryForObject("SELECT COUNT(*) FROM wishes WHERE id=888", Integer.class);
-        if (wishCnt == null || wishCnt == 0) {
-            String sql = String.format(
-                "INSERT INTO wishes(id, couple_id, title, cost, cover_img, created_by, status, steps_json, total_steps, completed_steps, created_at, updated_at) VALUES (888,909,'[红线B6B7]穷情侣兑换贵愿望测试',666,'redline_wish.png',20101,'PENDING_APPROVAL','[{\"name\":\"执行兑换\",\"done\":false}]',1,0,%s,%s)",
-                now, now);
-            jdbc.update(sql);
-            log.info("[Seed] 红线愿望888插入完成 c909 price=666 c909只有100币 B6余额不足拦截 B7并发1成1败");
+        if (tableExists("wishes")) {
+            Integer wishCnt = jdbc.queryForObject("SELECT COUNT(*) FROM wishes WHERE id=888", Integer.class);
+            if (wishCnt == null || wishCnt == 0) {
+                String sql = String.format(
+                    "INSERT INTO wishes(id, couple_id, title, cost, cover_img, created_by, status, steps_json, total_steps, completed_steps, created_at, updated_at) VALUES (888,909,'[红线B6B7]穷情侣兑换贵愿望测试',666,'redline_wish.png',20101,'PENDING_APPROVAL','[{\"name\":\"执行兑换\",\"done\":false}]',1,0,%s,%s)",
+                    now, now);
+                jdbc.update(sql);
+                log.info("[Seed] 红线愿望888插入完成 c909 price=666 c909只有100币 B6余额不足拦截 B7并发1成1败");
+            }
         }
 
-        Integer annivCnt = jdbc.queryForObject("SELECT COUNT(*) FROM anniversaries WHERE id=9999", Integer.class);
-        if (annivCnt == null || annivCnt == 0) {
-            String sql = String.format(
-                "INSERT INTO anniversaries(id, couple_id, title, target_date, type, emoji, created_at, updated_at) VALUES (9999,108,'[红线C1C2]百日纪念日测试','2024-09-01','milestone','🎉',%s,%s)",
-                now, now);
-            jdbc.update(sql);
-            log.info("[Seed] 红线纪念日9999插入完成 c108 C1跨情侣读 C2跨情侣删 404+30004");
+        if (tableExists("anniversaries")) {
+            Integer annivCnt = jdbc.queryForObject("SELECT COUNT(*) FROM anniversaries WHERE id=9999", Integer.class);
+            if (annivCnt == null || annivCnt == 0) {
+                String sql = String.format(
+                    "INSERT INTO anniversaries(id, couple_id, title, target_date, type, emoji, created_at, updated_at) VALUES (9999,108,'[红线C1C2]百日纪念日测试','2024-09-01','milestone','🎉',%s,%s)",
+                    now, now);
+                jdbc.update(sql);
+                log.info("[Seed] 红线纪念日9999插入完成 c108 C1跨情侣读 C2跨情侣删 404+30004");
+            }
         }
 
-        Integer letterCnt = jdbc.queryForObject("SELECT COUNT(*) FROM love_letters WHERE id=772", Integer.class);
-        if (letterCnt == null || letterCnt == 0) {
-            final Object isTimeCapsule = pg ? Boolean.FALSE : 0;
-            String cipherPlaceholder = "REDLINE_SEED_CIPHER_PLACEHOLDER_772::" + java.util.Base64.getEncoder().encodeToString("[红线C4]亲爱的，谢谢你一直以来的陪伴，这是红线测试专用信件内容不能被C读到。".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            jdbc.update(String.format(
-                "INSERT INTO love_letters(id, couple_id, sender_id, receiver_id, content_cipher, is_time_capsule, created_at) VALUES (772,108,201,202,'%s',%s,%s)",
-                cipherPlaceholder.replace("'", "''"), isTimeCapsule, now));
-            log.info("[Seed] 红线信件772插入完成 c108 A→B C4跨情侣读 404+30004 (cipher占位可正常详情接口访问)");
+        if (tableExists("love_letters")) {
+            Integer letterCnt = jdbc.queryForObject("SELECT COUNT(*) FROM love_letters WHERE id=772", Integer.class);
+            if (letterCnt == null || letterCnt == 0) {
+                final Object isTimeCapsule = pg ? Boolean.FALSE : 0;
+                String cipherPlaceholder = "REDLINE_SEED_CIPHER_PLACEHOLDER_772::" + java.util.Base64.getEncoder().encodeToString("[红线C4]亲爱的，谢谢你一直以来的陪伴，这是红线测试专用信件内容不能被C读到。".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                jdbc.update(String.format(
+                    "INSERT INTO love_letters(id, couple_id, sender_id, receiver_id, content_cipher, is_time_capsule, created_at) VALUES (772,108,201,202,'%s',%s,%s)",
+                    cipherPlaceholder.replace("'", "''"), isTimeCapsule, now));
+                log.info("[Seed] 红线信件772插入完成 c108 A→B C4跨情侣读 404+30004 (cipher占位可正常详情接口访问)");
+            }
         }
 
-        log.info("[Seed] 红线专用数据初始化全部完成 909/108/200+441/99/888/9999/772+INIT流水3条");
+        log.info("[Seed] 红线专用数据初始化流程完成(缺表自动跳过，不影响启动)");
     }
 
     private void seedQuizQuestions() {
@@ -165,6 +193,7 @@ public class SeedRunner implements CommandLineRunner {
     }
 
     private void seedChecklist() {
+        if (!tableExists("checklists")) return;
         final boolean pg = isPostgres();
         final String now = pg ? "CURRENT_TIMESTAMP" : "NOW()";
         final Object isPreset = pg ? Boolean.TRUE : 1;
