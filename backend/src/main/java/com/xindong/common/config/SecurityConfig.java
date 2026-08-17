@@ -95,21 +95,22 @@ public class SecurityConfig {
                                 "/actuator/metrics/**",
                                 "/error"
                         ).permitAll()
-                        // === 3. Spring MVC真实Controller接口白名单（带/api/v1前缀，servlet.path生效后必须对齐！）===
+                        // === 3. Spring MVC真实Controller接口白名单（无前缀！和前端打包的axios请求路径100%对齐）===
+                        // 前端打包auth.api-BXGJ8_R2.js明确写的: o.post("/auth/login")、o.post("/couple/bind") 没有/api/v1!
                         .requestMatchers(
-                                "/api/v1/auth/**",
-                                "/api/v1/couple/verify-invite"
+                                "/auth/**",
+                                "/couple/verify-invite"
                         ).permitAll()
                         // === 4. Vue Router History模式：GET + Accept头text/html + URI不含. → 放行（浏览器F5刷新不401）===
                         .requestMatchers(SPA_HISTORY_GET_MATCHER).permitAll()
-                        // === 5. 公共GET数据接口（带/api/v1前缀）===
+                        // === 5. 公共GET数据接口（无前缀！和前端打包请求路径对齐）===
                         .requestMatchers(HttpMethod.GET,
-                                "/api/v1/quiz/**",
-                                "/api/v1/checklists",
-                                "/api/v1/weekly/**",
-                                "/api/v1/anniversaries/**",
-                                "/api/v1/mood/types",
-                                "/api/v1/daily-quiz/today"
+                                "/quiz/**",
+                                "/checklists",
+                                "/weekly/**",
+                                "/anniversaries/**",
+                                "/mood/types",
+                                "/daily-quiz/today"
                         ).permitAll()
                         // === 6. 其他所有请求：必须JWT认证 ===
                         .anyRequest().authenticated()

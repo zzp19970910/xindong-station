@@ -48,9 +48,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (STATIC_URI.matcher(uri).matches() || uri.startsWith("/assets/") || uri.startsWith("/node_modules/")) {
             return true;
         }
-        // 2. 明确的白名单路径直接跳过（和SecurityConfig.permitAll保持一致）
+        // 2. 明确的白名单路径直接跳过（和SecurityConfig.permitAll保持一致！前端打包路径无前缀！）
         if (uri.equals("/") || uri.equals("/index.html") || uri.equals("/favicon.ico") || uri.equals("/robots.txt") ||
-                uri.startsWith("/api/v1/auth/") || uri.startsWith("/swagger-ui") || uri.equals("/swagger-ui.html") ||
+                uri.startsWith("/auth/") || uri.startsWith("/swagger-ui") || uri.equals("/swagger-ui.html") ||
                 uri.startsWith("/api-docs") || uri.startsWith("/v3/api-docs") ||
                 uri.startsWith("/actuator/health") || uri.startsWith("/actuator/info") ||
                 uri.equals("/error")) {

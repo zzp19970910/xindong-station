@@ -13,12 +13,10 @@ spring:
       max-request-size: 50MB
   mvc:
     servlet:
-      # Spring Boot 3 官方推荐单JAR前后端部署：只改DispatcherServlet路径，Tomcat DefaultServlet独立处理静态资源/Actuator/Vue
-      # ✅ Controller /auth/** → /api/v1/auth/** 完美匹配前端axios baseURL=/api/v1
-      # ✅ classpath:/static/index.html → 域名根路径 / 直接返回, 不用加/api/v1
-      # ✅ Actuator /actuator/health → 根路径下可访问, Render健康检查通过
-      # ✅ Vue History /login, /settings/coin-center → WebMvcConfig Interceptor forward /index.html 完美
-      path: /api/v1
+      # ⚠️ 绝对不要再加path=/api/v1! 前端打包时axios请求路径是/auth/login这种裸路径,
+      # 加了servlet.path之后DispatcherServlet根本收不到/auth请求→404→前端显示"网络异常"!
+      # 静态资源/Actuator/Vue History都走默认根路径就好，和Controller的@RequestMapping直接匹配
+      path:  # 留空=根路径/，和前端打包的API路径100%对齐！
   task:
     execution:
       pool:
