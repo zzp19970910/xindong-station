@@ -1,0 +1,185 @@
+# ============================================================
+#  xindong-station .gitignore（重组后结构专用 V1.0）
+#  目标：
+#    ✅ 保留 Zeabur 部署必须的核心文件
+#    ❌ 排除 大体积产物/日志/测试报告/临时文件/敏感信息
+#  推送仓库前，建议用 git status 检查一下，确认没有多余的文件被加入
+# ============================================================
+
+# ============================================================
+#  第一部分：后端 backend/ 排除项
+#  【保留】 backend/pom.xml + backend/src/** （Java源码+资源文件+Flyway迁移脚本）
+# ============================================================
+
+# Maven 构建产物（编译好的.class/.jar，这些在Zeabur上会重新构建，不用推）
+backend/target/
+backend/build/
+backend/out/
+
+# Maven wrapper（大多数情况用系统mvn，不需要；如果要用wrapper把下面3行注释掉）
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+
+# 数据库本地文件（SQLite遗留/H2测试库，部署用Zeabur Marketplace MySQL，本地数据库绝对不能推！）
+backend/data/*.db
+backend/data/*.db.*
+backend/data/*.sqlite
+backend/data/*.sqlite3
+backend/data/backup/
+
+# ============================================================
+#  第二部分：前端 frontend/xindong-web/ 排除项
+#  【保留】 frontend/xindong-web/package*.json + frontend/xindong-web/src/** +
+#          frontend/xindong-web/vite.config.* + frontend/xindong-web/.env.production
+# ============================================================
+
+# Node依赖包（体积超大！1GB+，绝对不能推，Zeabur上npm install自动装）
+frontend/xindong-web/node_modules/
+
+# Vite构建产物（npm run build生成的静态文件，Zeabur会重新构建，不用推）
+frontend/xindong-web/dist/
+frontend/xindong-web/.vite/
+
+# Vite缓存
+frontend/xindong-web/.cache/
+frontend/xindong-web/parcel-cache/
+
+# 本地调试环境变量（含密钥/本地IP，不能推！）
+frontend/xindong-web/.env
+frontend/xindong-web/.env.local
+frontend/xindong-web/.env.*.local
+
+# ============================================================
+#  第三部分：杂项 misc/ 排除项
+#  【保留】 misc/docs/*.md（项目文档/归档/提示词）+ misc/scripts/*.ps1/py（核心运维脚本）
+# ============================================================
+
+# 运行日志（实时生成，体积超大，推了没用）
+misc/logs/
+backend/logs/
+logs/
+*.log
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 测试报告HTML（体积大+历史记录，不用推）
+misc/report_*.html
+misc/success_answers/
+misc/e2e_screenshots/
+
+# ============================================================
+#  第四部分：IDE/编辑器/操作系统 临时文件（跨平台通用）
+# ============================================================
+
+# JetBrains IDEA/WebStorm/PyCharm
+.idea/
+*.iws
+*.iml
+*.ipr
+*.idea
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+*.code-workspace
+
+# Eclipse / Spring Tools 4
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+.nbproject/private/
+/nbbuild/
+/nbdist/
+/.nb-gradle/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+
+# ============================================================
+#  第五部分：部署脚本/临时文件 排除
+#  （重组脚本、启停脚本留在本地用即可，部署到Zeabur用的是Dockerfile，不是这些脚本）
+#  如果你想把脚本也推仓库备份，把下面几行删掉即可
+# ============================================================
+
+*.ps1
+*.bat
+*.cmd
+
+# ============================================================
+#  第六部分：通用临时文件/压缩包/备份
+# ============================================================
+
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# 压缩包/备份包（推之前要注意：里面可能有密钥/数据库！）
+*.zip
+*.rar
+*.7z
+*.tar
+*.tar.gz
+*.tgz
+*.tar.bz2
+backup/
+backups/
+old/
+
+# ============================================================
+#  第七部分：安全红线：任何可能包含密钥的文件 绝对禁止推送！
+#  如果不小心把下面这些文件加了git add，立刻用 git reset HEAD <文件名> 撤回
+# ============================================================
+
+# 证书/私钥
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# SSH
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+.ssh/
+
+# 本地环境变量/密钥文件
+.env.development
+.env.staging
+*.local
+
+# ============================================================
+#  【可选】本地开发用，如果你想把启动停止脚本也一起备份到仓库，
+#  把下面两行的注释去掉（前面的#删掉），仅保留这两个脚本，其他ps1仍然忽略：
+#
+#  !013-START-xindong-station.ps1
+#  !014-STOP-xindong-station.ps1
+# ============================================================

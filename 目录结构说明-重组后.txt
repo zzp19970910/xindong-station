@@ -1,0 +1,102 @@
+============================================================
+ 心动空间站 xindong-station 目录重组说明（2026-08-17）
+============================================================
+
+【顶层3个文件夹，清清楚楚】
+  1. backend/    ← 后端全部内容（SpringBoot + Maven + SQLite）
+  2. frontend/   ← 前端全部内容（Vue3 + Vite）
+  3. misc/       ← 其他杂项全部放这里（文档/脚本/日志/截图/报告）
+
+【各文件夹内部明细】
+------------------------------------------------------------
+backend/（后端）
+├─ src/                Java源码（main + test）
+├─ pom.xml             Maven构建配置【★合包模式前端资源路径已自动改好】
+├─ target/             编译产物（.jar / .class）
+└─ data/               SQLite数据库（xindong_dev.db）
+
+【重要】.gitignore 保留在项目根目录（Git要求放仓库根目录才能生效）
+
+frontend/（前端）
+└─ xindong-web/        Vue3 + Vite 前端工程（原 web/ 目录改名，明确项目名）
+   ├─ src/             前端源码（api / views / router / stores 等）
+   ├─ dist/            前端构建产物（npm run build 后生成）
+   ├─ node_modules/    前端依赖包
+   ├─ package.json     NPM 配置
+   ├─ .env.production  分离部署时的后端 API 地址配置
+   └─ vite.config.ts   Vite 配置
+
+misc/（其他内容杂项）
+├─ docs/               项目文档（批次归档 / 历史问题记忆库 / 提示词）
+├─ scripts/            所有脚本（启动 / 测试 / 重置 / 健康检查 .ps1 + .py）
+├─ logs/               运行日志（backend.log / test_*.log）
+├─ e2e_screenshots/    E2E 端到端测试截图
+├─ report_*.html       80条测试报告 / 红线测试报告 / UI巡检报告
+├─ README.md           项目说明
+└─ package-lock.json   根级 npm 锁文件
+
+【双模式启动路径（重组后直接能用）】
+------------------------------------------------------------
+▶ 模式A：前后端分离部署（推荐日常开发用）
+
+   后端：
+     cd f:\docker\xindong-station\backend
+     mvn spring-boot:run
+     （默认分离模式：只启后端接口，不拷贝前端，端口 8080）
+
+   前端：
+     cd f:\docker\xindong-station\frontend\xindong-web
+     npm run dev
+     （Vite 独立启动，.env.production 里的
+      VITE_API_BASE=http://localhost:8080/api/v1 已生效）
+
+------------------------------------------------------------
+▶ 模式B：合包部署（单 jar 包含前后端，同端口，上线用）
+
+   ① 前端先构建：
+      cd f:\docker\xindong-station\frontend\xindong-web
+      npm run build
+
+   ② 后端打包（激活 embed-frontend 合包模式）：
+      cd f:\docker\xindong-station\backend
+      mvn clean package -Pembed-frontend -DskipTests
+      【pom.xml 里的路径脚本已自动改好：
+       原 ${project.basedir}/web/dist
+       → 新 ${project.basedir}/../frontend/xindong-web/dist】
+
+   ③ 启动 jar（激活 embed-frontend Spring Profile）：
+      java -jar target\xindong-station-*.jar --spring.profiles.active=embed-frontend
+
+   ④ 访问：http://localhost:8080/
+      前端页面 + 后端接口同端口，单 jar 直接部署
+
+【后续新增文件放哪？】
+------------------------------------------------------------
+  · 写 Java 代码 / SQL 脚本 / 改 application.yml
+    → 放 backend/
+
+  · 写 Vue 页面 / 改 API 请求 / 调前端样式
+    → 放 frontend/xindong-web/
+
+  · 写测试脚本 / 生成测试报告 / 写文档 / 存运行日志
+    → 放 misc/
+
+【scripts 硬编码路径提示】
+------------------------------------------------------------
+misc/scripts/ 下有 4 个文件（060/061/run-ui-e2e/e2e_ui_patrol.py）
+之前写死了 f:\docker\xindong-station\scripts\ 绝对路径。
+
+临时使用有两种方案：
+  ① 最快：把 misc/scripts 整个文件夹复制回项目根目录
+     （f:\docker\xindong-station\scripts，不用改任何代码）
+  ② 永久：打开对应脚本，把里面的
+     f:\docker\xindong-station\scripts
+     全部替换成
+     f:\docker\xindong-station\misc\scripts
+
+核心启动脚本（06-F-OneClickTandem / 04-D-LocalDevTandem 等）
+用的是相对路径 Set-Location，不受重组影响，直接能用。
+
+============================================================
+ 本次重组是幂等的：不小心重复执行脚本不会报错、不会覆盖。
+============================================================

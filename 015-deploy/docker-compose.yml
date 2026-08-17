@@ -1,0 +1,96 @@
+# ============================================================
+#  xindong-station 公网部署 - Docker Compose 一键配置
+# 用法：
+#   1. 把 015-deploy/ 整个目录上传到服务器（比如 /opt/xindong-station/）
+#   2. 修改下面 3 处必须改的地方（JWT密钥/域名/邮箱）
+#   3. 服务器上执行：
+#        cd /opt/xindong-station
+#        docker compose up -d
+# ============================================================
+
+services:
+
+  # ============== 核心服务：SpringBoot + 前端 合包单Jar ==============
+  app:
+    build:
+      context: ..   # 项目根目录（上一级，因为docker-compose放在 015-deploy/ 下）
+      dockerfile: ./Dockerfile
+    container_name: xindong-app
+    restart: unless-stopped
+    environment:
+      # ------------------------------------------------------------------
+      # 【必须改1】JWT密钥：改成随机32+位字符串（键盘瞎打一串就行，别用默认）
+      # ------------------------------------------------------------------
+      JWT_SECRET: "Please-Change-Me-To-A-Long-Random-String-32chars-Min!!!"
+      # ------------------------------------------------------------------
+      # 【必须改2】私信加密密钥：改成另一个随机32+位字符串
+      # ------------------------------------------------------------------
+      LETTER_AES_KEY: "Please-Change-Me-To-Another-Random-32byte-Key!OK"
+      # ------------------------------------------------------------------
+      # 【可选改】短信超级验证码（不用阿里云短信时，所有人都能用这个码登录/注册）
+      # ------------------------------------------------------------------
+      SMS_SUPER_CODE: "1234"
+      # 【可选】阿里云真实短信配置（上线后建议填，就不用超级验证码了）
+      # ALI_SMS_AK: "your-aliyun-access-key-id"
+      # ALI_SMS_SK: "your-aliyun-access-key-secret"
+
+      SPRING_PROFILES_ACTIVE: "embed-frontend"
+      # 1核2G服务器建议JVM堆内存：256m~768m，剩下给Nginx+系统
+      JAVA_OPTS: "-Xms256m -Xmx768m -XX:+UseG1GC"
+    volumes:
+      # SQLite数据库持久化：容器删了数据不会丢
+      - ./data:/app/data
+      # 日志持久化：方便排查问题
+      - ./logs:/app/logs
+    # 不直接暴露公网端口，只让本机Nginx访问，更安全
+    expose:
+      - "8080"
+    networks:
+      - xindong-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/user/send-sms?phone=13800138000"]
+      interval: 30s
+      timeout: 8s
+      retries: 5
+      start_period: 60s
+
+  # ============== 反向代理：Nginx + 自动HTTPS证书 ==============
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: xindong-nginx
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"     # HTTP，必须开，不然Let's Encrypt没法申请证书
+      - "443:443"   # HTTPS，正式访问入口
+    volumes:
+      # Nginx配置文件（见下面的 nginx.conf.template）
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # HTTPS证书自动申请+续期（Certbot会把证书写到这里）
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+      # Nginx日志
+      - ./logs/nginx:/var/log/nginx
+    networks:
+      - xindong-net
+
+  # ============== 自动申请/续期HTTPS证书（Let's Encrypt免费90天，自动续） ==============
+  certbot:
+    image: certbot/certbot:latest
+    container_name: xindong-certbot
+    restart: unless-stopped
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    # 【必须改3】下面把 your-domain.com 改成你自己的域名 + 你的邮箱（证书过期前会发提醒邮件）
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot certonly --webroot -w /var/www/certbot --keep-until-expiring --non-interactive --agree-tos -m your-email@example.com -d your-domain.com -d www.your-domain.com; sleep 12h & wait $${!}; done;'"
+    depends_on:
+      - nginx
+    networks:
+      - xindong-net
+
+networks:
+  xindong-net:
+    driver: bridge
