@@ -3,8 +3,11 @@ import { showToast, showDialog } from 'vant'
 import { useAuthStore } from '@/stores/auth.store'
 import router from '@/router'
 
+let apiBase = ((import.meta as any).env.VITE_API_BASE as string)?.trim() || '/api/v1'
+if (apiBase.endsWith('/')) apiBase = apiBase.slice(0, -1)
+
 const request: AxiosInstance = axios.create({
-  baseURL: ((import.meta as any).env.VITE_API_BASE as string)?.trim() || '/api/v1',
+  baseURL: apiBase,
   timeout: 10000
 })
 

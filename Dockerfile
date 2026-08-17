@@ -58,7 +58,7 @@ COPY --from=backend-builder /build/app.jar ./app.jar
 
 # Healthcheck: SpringBoot public endpoint (no login required)
 HEALTHCHECK --interval=30s --timeout=8s --start-period=60s --retries=5 \
-  CMD curl -f http://localhost:8080/api/v1/user/send-sms?phone=12345678901 || exit 1
+  CMD curl -f -X POST http://localhost:8080/auth/sms-code -H "Content-Type: application/json" -d '{\"phone\":\"12345678901\"}' || exit 1
 
 # SQLite database lives here -> mount as Docker VOLUME for persistent storage
 VOLUME ["/app/data"]
