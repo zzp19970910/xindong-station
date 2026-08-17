@@ -1,21 +1,50 @@
-﻿import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
 import { showToast, showDialog } from 'vant'
 import { useAuthStore } from '@/stores/auth.store'
 import router from '@/router'
 
-let apiBase = ((import.meta as any).env.VITE_API_BASE as string)?.trim() || '/api/v1'
-if (apiBase.endsWith('/')) apiBase = apiBase.slice(0, -1)
 
-const request: AxiosInstance = axios.create({
+// --- 3-LAYER DEFENSE AGAINST localhost ---
+// Layer 1: Force empty baseURL (same-origin). Ignore ALL env vars that may contain localhost from cached old builds.
+// Layer 2: In request interceptor, if any URL/baseURL has localhost/127.0.0.1, rewrite to window.location.origin.
+// Layer 3: Any env var value with ":8080" or ":5173" is considered dev junk -> dropped.
+function sanitizeBaseUrl(raw) {
+  if (!raw) return ''
+  var v = String(raw).trim()
+  if (v.indexOf('localhost') >= 0 || v.indexOf('127.0.0.1') >= 0 || v.indexOf(':8080') >= 0 || v.indexOf(':5173') >= 0) return ''
+  if (v === '/' || v.lastIndexOf('/') === v.length - 1) v = v.slice(0, -1)
+  return v
+}
+var envBase
+try { envBase = (typeof import.meta !== 'undefined' && import.meta && import.meta.env) ? import.meta.env.VITE_API_BASE : undefined } catch(e) { envBase = undefined }
+var apiBase = sanitizeBaseUrl(envBase)
+if (typeof window !== 'undefined') {
+  try { console.log('[request] init baseURL=[' + apiBase + '] env=[' + (envBase == null ? 'N/A' : String(envBase)) + '] origin=[' + window.location.origin + ']') } catch(e){}
+}
+
+var request = axios.create({
   baseURL: apiBase,
   timeout: 10000
 })
 
-request.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const auth = useAuthStore()
-  if (auth.token) {
-    config.headers.Authorization = `Bearer ${auth.token}`
+request.interceptors.request.use(function (config) {
+  var auth = useAuthStore()
+  if (auth && auth.token) {
+    config.headers.Authorization = 'Bearer ' + auth.token
   }
+  // --- LAYER 2 LAST DEFENSE: rewrite any localhost URL to current origin ---
+  try {
+    var before = String(config.baseURL || '') + String(config.url || '')
+    if (before.indexOf('localhost') >= 0 || before.indexOf('127.0.0.1') >= 0) {
+      var origin = (typeof window !== 'undefined') ? window.location.origin : ''
+      if (origin) {
+        var after = before.replace(/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, origin)
+        config.baseURL = ''
+        config.url = after
+        try { console.warn('[request] SANITIZED URL! before=[' + before + '] after=[' + after + ']') } catch(e){}
+      }
+    }
+  } catch(ee) { /* ignore */ }
   return config
 })
 
